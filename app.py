@@ -33,8 +33,11 @@ YEAR_RE = re.compile(r"^\d{4}$")
 
 
 APP_DIR = Path(__file__).resolve().parent
-VIEW_SUMMARY_PATH = APP_DIR / "data" / "view_summary.json"
 DATA_DIR = APP_DIR / "data"
+VIEW_SUMMARY_CANDIDATES = [
+    DATA_DIR / "view_summary.json",
+    APP_DIR / "view_summary.json",
+]
 LOCAL_DATA_CANDIDATES = [
     APP_DIR / "main_data.xlsx",
     APP_DIR / "main_data.xls",
@@ -168,16 +171,8 @@ def find_local_data_file() -> Path | None:
         if p.exists() and p.is_file():
             return p
 
-    # 파일명이 달라도 앱 폴더 또는 data 폴더에 있는 엑셀/CSV를 자동 탐색합니다.
-    # 엑셀은 read_local_table()에서 '공동주택 공시가격' 탭이 있는지 다시 검증합니다.
-    for folder in (DATA_DIR, APP_DIR):
-        if not folder.exists():
-            continue
-        for pattern in ("*.xlsx", "*.xls", "*.csv"):
-            for p in sorted(folder.glob(pattern)):
-                if p.name.startswith("~$"):
-                    continue
-                return p
+    # view_summary/view_floor_rows 같은 조망 보조 CSV를 공시가격 파일로 오인하지 않도록
+    # 정해진 파일명 후보만 자동 인식합니다.
     return None
 
 
@@ -851,9 +846,10 @@ def render_pyeong_result(range_info: dict) -> None:
 # =========================
 def load_view_summary() -> list[dict]:
     """조망 요약은 데이터 보정이 잦으므로 매 실행 때 파일을 다시 읽습니다."""
-    if not VIEW_SUMMARY_PATH.exists():
+    summary_path = next((p for p in VIEW_SUMMARY_CANDIDATES if p.exists() and p.is_file()), None)
+    if summary_path is None:
         return []
-    data = json.loads(VIEW_SUMMARY_PATH.read_text(encoding="utf-8"))
+    data = json.loads(summary_path.read_text(encoding="utf-8"))
     return list(data.get("rows", []))
 
 
