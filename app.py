@@ -1055,35 +1055,52 @@ def safe_accessible_pyeongs(range_info: dict, current_pyeong_value) -> list[str]
 
 
 def lower_reference_pyeongs(range_info: dict, current_pyeong_value, primary_pyeongs: list[str]) -> list[str]:
-    """예상 가능 평형보다 낮지만 현재 평형 이상인 조망 참고 평형을 반환합니다."""
+    """펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 조망 참고 평형을 반환합니다."""
     available_df = range_info.get("available_df", pd.DataFrame())
     if not isinstance(available_df, pd.DataFrame) or available_df.empty:
         return []
 
-    primary_ranges = [pyeong_range(p) for p in primary_pyeongs]
+    def _is_p_marker(value) -> bool:
+        text = str(value or "").strip().upper().replace(" ", "")
+        return bool(re.search(r"^\(?P\d+", text) or re.search(r"PY\(P\)", text) or re.search(r"\(P\)", text))
+
+    normal_primary_pyeongs = [p for p in primary_pyeongs if not _is_p_marker(p)]
+    if not normal_primary_pyeongs:
+        return []
+
+    primary_ranges = [pyeong_range(p) for p in normal_primary_pyeongs]
     primary_lows = [lo for lo, hi in primary_ranges if lo is not None and hi is not None]
     if not primary_lows:
         return []
 
     lowest_primary = min(primary_lows)
-    current_min, current_max = pyeong_range(current_pyeong_value)
-    current_threshold = current_max if current_max is not None else 0
-    primary_set = {str(p) for p in primary_pyeongs}
+    primary_set = {str(p) for p in normal_primary_pyeongs}
 
-    out = []
-    for p in available_df["평형"].astype(str).tolist():
+    candidates: list[tuple[int, int, str]] = []
+    seen: set[str] = set()
+    for _, row in available_df.iterrows():
+        p = str(row.get("평형", ""))
+        if _is_p_marker(p):
+            continue
         lo, hi = pyeong_range(p)
         if lo is None or hi is None:
             continue
-        if hi < current_threshold:
+        try:
+            member_units = int(row.get("조합원 가능세대", 0))
+        except Exception:
+            member_units = 0
+        if member_units <= 0:
             continue
         if hi >= lowest_primary:
             continue
         if p in primary_set:
             continue
-        if p not in out:
-            out.append(p)
-    return out
+        if p not in seen:
+            candidates.append((hi, lo, p))
+            seen.add(p)
+
+    candidates = sorted(candidates, key=lambda item: (item[0], item[1]))
+    return [p for _, _, p in candidates[-2:]]
 
 
 def render_penthouse_priority(penthouse_pyeongs: list[str]) -> None:
@@ -1232,14 +1249,23 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
         render_grouped_view_tables(candidates)
 
     reference_normal_pyeongs = [p for p in reference_pyeongs if not is_penthouse_pyeong(p)]
-    reference_candidates = build_view_candidates(view_rows, zone_name, reference_normal_pyeongs)
-    if not reference_candidates.empty:
+    if reference_normal_pyeongs:
         st.markdown("#### 하위 참고 조망 후보")
         st.caption(
-            "아래 표는 예상 가능 평형보다 낮지만 현재 평형 이상에서 조망각이 좋은 참고 후보입니다. "
+            "아래 표는 펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 안에서, "
+            "조합원 선택 가능세대가 있고 조망각이 좋은 참고 후보입니다. "
             "예상 가능 평형을 대체하는 추천이 아니라 하향 선택을 검토할 때 보는 보조 자료입니다."
         )
-        render_grouped_view_tables(reference_candidates)
+        st.caption("하위 참고 대상: " + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs))
+
+        reference_candidates = build_view_candidates(view_rows, zone_name, reference_normal_pyeongs)
+        if reference_candidates.empty:
+            st.info(
+                "하위 참고 평형은 계산되었지만 조망 요약 데이터와 매칭되는 유닛 타입이 없습니다: "
+                + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs)
+            )
+        else:
+            render_grouped_view_tables(reference_candidates)
 
     st.caption(
         "주의: 이 추천은 미래 배치도 GeoJSON의 동·평형 유닛 기준입니다. "
