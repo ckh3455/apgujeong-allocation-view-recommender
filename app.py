@@ -1054,19 +1054,185 @@ def safe_accessible_pyeongs(range_info: dict, current_pyeong_value) -> list[str]
     return out
 
 
-def lower_reference_pyeongs(range_info: dict, current_pyeong_value, primary_pyeongs: list[str]) -> list[str]:
-    """펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 조망 참고 평형을 반환합니다."""
+def view_pyeong_label_from_unit_type(unit_type: str) -> str:
+    """조망 GeoJSON의 타입명을 앱 평형명으로 바꿉니다.
+
+    예: 51,52 -> 51~52py, 47A/47B -> 47평.
+    분양표상 환산 평형과 조망지도 타입명이 다른 경우에도
+    하위 참고 후보를 조망지도 기준 타입 순서로 잡기 위해 이 값을 사용합니다.
+    """
+    text = str(unit_type or "").strip()
+    nums = [int(x) for x in re.findall(r"\d+", text)]
+    if not nums:
+        return text
+    uniq = sorted(set(nums))
+    if len(uniq) >= 2:
+        return f"{uniq[0]}~{uniq[-1]}py"
+    return f"{uniq[0]}평"
+
+
+def available_units_for_pyeong(available_df: pd.DataFrame, pyeong_label: str) -> int:
+    """평형표에서 해당 조망 타입 숫자와 겹치는 조합원 가능세대 수를 반환합니다."""
+    if not isinstance(available_df, pd.DataFrame) or available_df.empty:
+        return 0
+
+    target_lo, target_hi = pyeong_range(pyeong_label)
+    if target_lo is None or target_hi is None:
+        return 0
+
+    total = 0
+    for _, row in available_df.iterrows():
+        row_p = str(row.get("평형", ""))
+        if is_penthouse_pyeong(row_p):
+            continue
+        lo, hi = pyeong_range(row_p)
+        if lo is None or hi is None:
+            continue
+        # 숫자 범위가 겹치면 같은 선택 가능 평형군으로 봅니다.
+        # 예: 조망타입 47A/47B -> 47평, 분양표 47평.
+        if hi < target_lo or lo > target_hi:
+            continue
+        try:
+            total += int(row.get("조합원 가능세대", 0))
+        except Exception:
+            pass
+    return total
+
+
+
+def view_pyeong_order_from_summary(zone_name: str | None, view_rows: list[dict] | None) -> list[str]:
+    """조망 요약 데이터에 실제 입력된 유닛 타입을 큰 평형부터 정렬합니다.
+
+    하위 참고 후보는 분양표 환산 평형 순서가 아니라, 실제 조망지도에 존재하는
+    타입 순서로 잡아야 합니다. 이 방식은 2·4·5구역에 동일하게 적용됩니다.
+    예: 4구역 52평 아래는 분양표상 49/50평이 아니라 조망지도상 47평, 43평입니다.
+    """
+    if not view_rows:
+        return []
+
+    target_zone_id = zone_id_from_name(zone_name or "")
+    found: dict[str, tuple[int, int, str]] = {}
+
+    for row in view_rows:
+        if str(row.get("zoneId", "")) != target_zone_id:
+            continue
+
+        label = view_pyeong_label_from_unit_type(str(row.get("unitType", "")))
+        if not label or is_penthouse_pyeong(label):
+            continue
+
+        lo, hi = pyeong_range(label)
+        if lo is None or hi is None:
+            continue
+
+        # 47A/47B처럼 같은 숫자 평형은 하나의 하위 단계로 묶습니다.
+        key = f"{lo}-{hi}"
+        if key not in found:
+            found[key] = (lo, hi, label)
+
+    ordered = sorted(found.values(), key=lambda item: (item[1], item[0], item[2]), reverse=True)
+    return [label for _lo, _hi, label in ordered]
+
+
+def lower_reference_pyeongs_by_view_order(
+    zone_name: str | None,
+    primary_pyeongs: list[str],
+    available_df: pd.DataFrame,
+    view_rows: list[dict] | None,
+    max_steps: int = 2,
+) -> list[str]:
+    """모든 구역에 대해 조망지도 타입 순서로 예상평형보다 낮은 max_steps개 평형을 반환합니다."""
+    order = view_pyeong_order_from_summary(zone_name, view_rows)
+    if not order:
+        return []
+
+    normal_primary = [p for p in primary_pyeongs if not is_penthouse_pyeong(p)]
+    if not normal_primary:
+        return []
+
+    primary_ranges: list[tuple[int, int]] = []
+    for p in normal_primary:
+        lo, hi = pyeong_range(p)
+        if lo is not None and hi is not None:
+            primary_ranges.append((lo, hi))
+    if not primary_ranges:
+        return []
+
+    # 예상 가능 평형군이 여러 개면 그중 가장 낮은 평형 바로 아래 2단계를 참고 후보로 봅니다.
+    lowest_primary_hi = min(hi for _lo, hi in primary_ranges)
+
+    start_index: int | None = None
+
+    # 1) 조망지도 타입과 예상 가능 평형이 겹치면 그 위치를 기준으로 합니다.
+    overlapping_indices: list[int] = []
+    for i, label in enumerate(order):
+        lo, hi = pyeong_range(label)
+        if lo is None or hi is None:
+            continue
+        for primary_lo, primary_hi in primary_ranges:
+            if hi < primary_lo or lo > primary_hi:
+                continue
+            overlapping_indices.append(i)
+            break
+    if overlapping_indices:
+        start_index = max(overlapping_indices)
+
+    # 2) 예상 평형이 조망지도에 직접 없으면, 그보다 작은 첫 번째 조망 타입부터 후보로 봅니다.
+    #    예: 예상 78평인데 조망지도 최고 하위 타입이 71평이면 71평부터 표시합니다.
+    if start_index is None:
+        for i, label in enumerate(order):
+            lo, hi = pyeong_range(label)
+            if lo is None or hi is None:
+                continue
+            if hi < lowest_primary_hi:
+                start_index = i - 1
+                break
+
+    if start_index is None:
+        return []
+
+    out: list[str] = []
+    seen_range: set[str] = set()
+    for label in order[start_index + 1:]:
+        lo, hi = pyeong_range(label)
+        if lo is None or hi is None:
+            continue
+        key = f"{lo}-{hi}"
+        if key in seen_range:
+            continue
+        if available_units_for_pyeong(available_df, label) <= 0:
+            continue
+        out.append(label)
+        seen_range.add(key)
+        if len(out) >= max_steps:
+            break
+
+    return out
+
+def lower_reference_pyeongs(
+    range_info: dict,
+    current_pyeong_value,
+    primary_pyeongs: list[str],
+    zone_name: str | None = None,
+    view_rows: list[dict] | None = None,
+) -> list[str]:
+    """펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 조망 참고 평형을 반환합니다.
+
+    우선순위는 모든 구역에서 조망지도에 실제 입력된 타입 순서입니다.
+    분양표 환산 평형과 조망지도 타입이 다를 때도 조망지도 순서를 우선합니다.
+    """
     available_df = range_info.get("available_df", pd.DataFrame())
     if not isinstance(available_df, pd.DataFrame) or available_df.empty:
         return []
 
-    def _is_p_marker(value) -> bool:
-        text = str(value or "").strip().upper().replace(" ", "")
-        return bool(re.search(r"^\(?P\d+", text) or re.search(r"PY\(P\)", text) or re.search(r"\(P\)", text))
-
-    normal_primary_pyeongs = [p for p in primary_pyeongs if not _is_p_marker(p)]
+    normal_primary_pyeongs = [p for p in primary_pyeongs if not is_penthouse_pyeong(p)]
     if not normal_primary_pyeongs:
         return []
+
+    # 모든 구역에서 분양표 환산 평형보다 실제 조망지도 타입 순서를 우선합니다.
+    ordered_lower = lower_reference_pyeongs_by_view_order(zone_name, normal_primary_pyeongs, available_df, view_rows or [], max_steps=2)
+    if ordered_lower:
+        return ordered_lower
 
     primary_ranges = [pyeong_range(p) for p in normal_primary_pyeongs]
     primary_lows = [lo for lo, hi in primary_ranges if lo is not None and hi is not None]
@@ -1078,29 +1244,56 @@ def lower_reference_pyeongs(range_info: dict, current_pyeong_value, primary_pyeo
 
     candidates: list[tuple[int, int, str]] = []
     seen: set[str] = set()
-    for _, row in available_df.iterrows():
-        p = str(row.get("평형", ""))
-        if _is_p_marker(p):
-            continue
-        lo, hi = pyeong_range(p)
-        if lo is None or hi is None:
-            continue
-        try:
-            member_units = int(row.get("조합원 가능세대", 0))
-        except Exception:
-            member_units = 0
-        if member_units <= 0:
-            continue
-        if hi >= lowest_primary:
-            continue
-        if p in primary_set:
-            continue
-        if p not in seen:
-            candidates.append((hi, lo, p))
-            seen.add(p)
 
-    candidates = sorted(candidates, key=lambda item: (item[0], item[1]))
-    return [p for _, _, p in candidates[-2:]]
+    # 1) 조망 데이터에 실제 존재하는 타입을 기준으로 하위 2단계를 먼저 산정합니다.
+    if zone_name and view_rows:
+        target_zone_id = zone_id_from_name(zone_name)
+        for view_row in view_rows:
+            if str(view_row.get("zoneId", "")) != target_zone_id:
+                continue
+            p = view_pyeong_label_from_unit_type(str(view_row.get("unitType", "")))
+            if not p or is_penthouse_pyeong(p):
+                continue
+            lo, hi = pyeong_range(p)
+            if lo is None or hi is None:
+                continue
+            if hi >= lowest_primary:
+                continue
+            if p in primary_set:
+                continue
+            if available_units_for_pyeong(available_df, p) <= 0:
+                continue
+            key = f"{lo}-{hi}"
+            if key not in seen:
+                candidates.append((hi, lo, p))
+                seen.add(key)
+
+    # 2) 조망 타입에서 못 찾은 경우에만 기존 분양표 기준으로 보조 산정합니다.
+    if not candidates:
+        for _, row in available_df.iterrows():
+            p = str(row.get("평형", ""))
+            if is_penthouse_pyeong(p):
+                continue
+            lo, hi = pyeong_range(p)
+            if lo is None or hi is None:
+                continue
+            try:
+                member_units = int(row.get("조합원 가능세대", 0))
+            except Exception:
+                member_units = 0
+            if member_units <= 0:
+                continue
+            if hi >= lowest_primary:
+                continue
+            if p in primary_set:
+                continue
+            key = f"{lo}-{hi}"
+            if key not in seen:
+                candidates.append((hi, lo, p))
+                seen.add(key)
+
+    candidates = sorted(candidates, key=lambda item: (item[0], item[1]), reverse=True)
+    return [p for _, _, p in candidates[:2]]
 
 
 def render_penthouse_priority(penthouse_pyeongs: list[str]) -> None:
@@ -1198,11 +1391,11 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
         st.info("현재 평형 이상에서 내 순위로 안전하게 진입 가능한 평형이 없어 조망 추천을 만들 수 없습니다.")
         return
 
-    reference_pyeongs = lower_reference_pyeongs(range_info, current_pyeong_value, possible_pyeongs)
+    view_rows = load_view_summary()
+    reference_pyeongs = lower_reference_pyeongs(range_info, current_pyeong_value, possible_pyeongs, zone_name, view_rows)
     penthouse_pyeongs = [p for p in possible_pyeongs if is_penthouse_pyeong(p)]
     normal_pyeongs = [p for p in possible_pyeongs if not is_penthouse_pyeong(p)]
 
-    view_rows = load_view_summary()
     if not view_rows:
         st.warning("조망 요약 데이터가 없습니다. data/view_summary.json 파일을 확인해 주세요.")
         return
