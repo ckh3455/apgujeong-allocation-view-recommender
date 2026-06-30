@@ -17,6 +17,7 @@ DEFAULT_MAIN_WORKSHEET_NAME = "공동주택 공시가격"
 DEFAULT_MAX_DATA_ROWS = 10337
 LOCAL_WORKSHEET_NAME = "공동주택 공시가격"
 RANK_YEAR = "2026"
+FLOOR_RANK_SPREAD_RATE = 0.10
 
 MULTI_OWNER_PAIRS_2ZONE = [
     [(101, 208), (105, 806)],
@@ -372,7 +373,7 @@ def apply_2026_floor_rank_adjustment(df_num: pd.DataFrame) -> pd.DataFrame:
     - 같은 구역/단지/동/호라인을 하나의 비교그룹으로 봅니다.
     - 최고층 바로 아래층을 최고 기준으로 둡니다.
       예: 13층 건물은 12층, 12층 건물은 11층.
-    - 1층부터 최고 기준층까지는 1층 가격과 최고 기준층 가격 사이를 균등 배분합니다.
+    - 1층부터 최고 기준층까지는 저층 기준가격 대비 10% 차이를 균등 배분합니다.
     - 꼭대기층은 최고 기준층보다 한 층 아래 가격과 같게 둡니다.
       예: 13층은 11층 가격, 12층은 10층 가격.
 
@@ -425,7 +426,7 @@ def apply_2026_floor_rank_adjustment(df_num: pd.DataFrame) -> pd.DataFrame:
             continue
 
         low_price = float(floor1.iloc[0])
-        peak_price = float(peak_price_series.iloc[0])
+        peak_price = low_price * (1 + FLOOR_RANK_SPREAD_RATE)
         denominator = max(1, intended_peak_floor - low_floor)
         top_equal_floor = min(top_equal_floor, intended_peak_floor - 1)
         top_equal_price = low_price + (peak_price - low_price) * ((top_equal_floor - low_floor) / denominator)
@@ -441,7 +442,7 @@ def apply_2026_floor_rank_adjustment(df_num: pd.DataFrame) -> pd.DataFrame:
             else:
                 continue
             df.at[row_idx, rank_col] = round(float(adjusted), 6)
-            df.at[row_idx, note_col] = f"{top_floor}층 보정"
+            df.at[row_idx, note_col] = f"{top_floor}층 10% 보정"
 
     return df.drop(columns=["__floor_no", "__line_no"], errors="ignore")
 
@@ -1456,7 +1457,7 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
             st.caption("현재 조망 요약 데이터에 입력된 평형: " + " / ".join(safe_display_text(p) for p in available))
     else:
         matched_pyeongs = set(candidates["가능평형"].astype(str).unique().tolist())
-        missing_pyeongs = [p for p in normal_pyeongs if safe_display_text(p) not in matched_pyeongs]
+        missing_pyeongs = [p for p in view_normal_pyeongs if safe_display_text(p) not in matched_pyeongs]
         if missing_pyeongs:
             st.warning(
                 "다음 예상 가능 평형은 조망 요약 데이터에 유닛 타입이 없어 계산에서 제외되었습니다: "
