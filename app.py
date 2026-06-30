@@ -391,8 +391,6 @@ def apply_2026_floor_rank_adjustment(df_num: pd.DataFrame) -> pd.DataFrame:
     df["__line_no"] = df["호"].map(infer_line_from_ho)
 
     group_cols = ["구역", "단지명", "동", "__line_no"]
-    if "평형" in df.columns:
-        group_cols.append("평형")
 
     for _, idx in df.groupby(group_cols, dropna=False).groups.items():
         sub = df.loc[list(idx)].copy()
@@ -400,28 +398,44 @@ def apply_2026_floor_rank_adjustment(df_num: pd.DataFrame) -> pd.DataFrame:
         if floors.dropna().empty:
             continue
         top_floor = int(floors.max())
-        peak_floor = top_floor - 1
+        intended_peak_floor = top_floor - 1
         top_equal_floor = top_floor - 2
         if top_floor < 3:
             continue
 
         prices = pd.to_numeric(sub[RANK_YEAR], errors="coerce")
         floor1 = prices.loc[floors == 1].dropna()
-        peak_price_series = prices.loc[floors == peak_floor].dropna()
-        if floor1.empty or peak_price_series.empty:
+        if floor1.empty:
+            low_floor = int(floors.dropna().min())
+            floor1 = prices.loc[floors == low_floor].dropna()
+        else:
+            low_floor = 1
+
+        peak_price_series = prices.loc[floors == intended_peak_floor].dropna()
+        if peak_price_series.empty:
+            available_peak_floors = sorted(
+                int(x) for x in floors.dropna().unique().tolist()
+                if int(x) < top_floor
+            )
+            if available_peak_floors:
+                intended_peak_floor = available_peak_floors[-1]
+                peak_price_series = prices.loc[floors == intended_peak_floor].dropna()
+
+        if floor1.empty or peak_price_series.empty or intended_peak_floor <= low_floor:
             continue
 
         low_price = float(floor1.iloc[0])
         peak_price = float(peak_price_series.iloc[0])
-        denominator = max(1, peak_floor - 1)
-        top_equal_price = low_price + (peak_price - low_price) * ((top_equal_floor - 1) / denominator)
+        denominator = max(1, intended_peak_floor - low_floor)
+        top_equal_floor = min(top_equal_floor, intended_peak_floor - 1)
+        top_equal_price = low_price + (peak_price - low_price) * ((top_equal_floor - low_floor) / denominator)
 
         for row_idx, floor_value in floors.items():
             if pd.isna(floor_value):
                 continue
             floor_i = int(floor_value)
-            if 1 <= floor_i <= peak_floor:
-                adjusted = low_price + (peak_price - low_price) * ((floor_i - 1) / denominator)
+            if low_floor <= floor_i <= intended_peak_floor:
+                adjusted = low_price + (peak_price - low_price) * ((floor_i - low_floor) / denominator)
             elif floor_i == top_floor:
                 adjusted = top_equal_price
             else:
@@ -928,6 +942,84 @@ def available_view_pyeongs(view_rows: list[dict], zone_name: str) -> list[str]:
     return sorted(out, key=lambda p: (pyeong_number(p) or 0, p))
 
 
+def resolve_to_view_pyeongs(view_rows: list[dict], zone_name: str, pyeongs: list[str]) -> tuple[list[str], list[str]]:
+    """
+    분양가능 평형을 조망 데이터에 실제 존재하는 평형명으로 맞춥니다.
+
+    예: 4구역 68평은 조망 데이터에 68평이 없으면 바로 아래 입력 평형인 67평으로 봅니다.
+    """
+    available = available_view_pyeongs(view_rows, zone_name)
+    if not available:
+        return [], []
+
+    available_set = set(available)
+    resolved: list[str] = []
+    notes: list[str] = []
+
+    for p in pyeongs:
+        p_disp = safe_display_text(p)
+        if p_disp in available_set:
+            target = p_disp
+        else:
+            _lo, hi = pyeong_range(p_disp)
+            if hi is None:
+                continue
+
+            normal_available = [
+                ap for ap in available
+                if not is_penthouse_pyeong(ap) and (pyeong_number(ap) is not None)
+            ]
+            lower_or_equal = [ap for ap in normal_available if (pyeong_number(ap) or 0) <= hi]
+            if lower_or_equal:
+                target = max(lower_or_equal, key=lambda ap: pyeong_number(ap) or 0)
+            elif normal_available:
+                target = min(normal_available, key=lambda ap: abs((pyeong_number(ap) or 0) - hi))
+            else:
+                continue
+
+            notes.append(f"{p_disp} → 조망데이터 기준 {target}")
+
+        if target not in resolved:
+            resolved.append(target)
+
+    return resolved, notes
+
+
+def better_view_reference_pyeongs(
+    view_rows: list[dict],
+    zone_name: str,
+    baseline_pyeongs: list[str],
+    baseline_best_angle: float,
+) -> list[str]:
+    """기준 평형보다 최고 조망각이 더 좋은 조망 데이터 평형만 반환합니다."""
+    if not baseline_pyeongs:
+        return []
+
+    baseline_nums = [pyeong_number(p) for p in baseline_pyeongs if pyeong_number(p) is not None]
+    if not baseline_nums:
+        return []
+    max_baseline_num = max(baseline_nums)
+    baseline_set = set(baseline_pyeongs)
+
+    candidates: list[tuple[float, int, str]] = []
+    for p in available_view_pyeongs(view_rows, zone_name):
+        if p in baseline_set or is_penthouse_pyeong(p):
+            continue
+        num = pyeong_number(p)
+        if num is None or num > max_baseline_num:
+            continue
+
+        cdf = build_view_candidates(view_rows, zone_name, [p])
+        if cdf.empty:
+            continue
+        best_angle = float(pd.to_numeric(cdf["한강조망각"], errors="coerce").max())
+        if best_angle > float(baseline_best_angle):
+            candidates.append((best_angle, num, p))
+
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    return [p for _, _, p in candidates]
+
+
 def is_penthouse_pyeong(value) -> bool:
     text = str(value or "").strip().upper().replace(" ", "")
     if not text:
@@ -1330,7 +1422,6 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
         st.info("현재 평형 이상에서 내 순위로 안전하게 진입 가능한 평형이 없어 조망 추천을 만들 수 없습니다.")
         return
 
-    reference_pyeongs = lower_reference_pyeongs(range_info, current_pyeong_value, possible_pyeongs)
     penthouse_pyeongs = [p for p in possible_pyeongs if is_penthouse_pyeong(p)]
     normal_pyeongs = [p for p in possible_pyeongs if not is_penthouse_pyeong(p)]
 
@@ -1348,7 +1439,11 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
     st.markdown("#### 예상 가능 평형 조망")
     render_penthouse_priority(penthouse_pyeongs)
 
-    candidates = build_view_candidates(view_rows, zone_name, normal_pyeongs)
+    view_normal_pyeongs, resolve_notes = resolve_to_view_pyeongs(view_rows, zone_name, normal_pyeongs)
+    if resolve_notes:
+        st.caption(" / ".join(resolve_notes))
+
+    candidates = build_view_candidates(view_rows, zone_name, view_normal_pyeongs)
     if not normal_pyeongs:
         st.caption("안전 진입 가능 평형이 펜트하우스 후보로만 구성되어 일반층 조망표는 생략합니다.")
     elif candidates.empty:
@@ -1383,20 +1478,30 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
 
         render_grouped_view_tables(candidates)
 
-    reference_normal_pyeongs = [p for p in reference_pyeongs if not is_penthouse_pyeong(p)]
-    if reference_normal_pyeongs:
-        st.markdown("#### 하위 참고 조망 후보")
-        st.caption(
-            "아래 표는 펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 안에서, "
-            "조합원 선택 가능세대가 있고 조망각이 좋은 참고 후보입니다. "
-            "예상 가능 평형을 대체하는 추천이 아니라 하향 선택을 검토할 때 보는 보조 자료입니다."
+    if not candidates.empty:
+        baseline_best_angle = float(pd.to_numeric(candidates["한강조망각"], errors="coerce").max())
+        reference_normal_pyeongs = better_view_reference_pyeongs(
+            view_rows=view_rows,
+            zone_name=zone_name,
+            baseline_pyeongs=view_normal_pyeongs,
+            baseline_best_angle=baseline_best_angle,
         )
-        st.caption("하위 참고 대상: " + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs))
+    else:
+        reference_normal_pyeongs = []
+
+    if reference_normal_pyeongs:
+        st.markdown("#### 조망 우위 참고 후보")
+        st.caption(
+            "아래 표는 조망 데이터 기준 적용평형보다 낮거나 같은 평형대 중, "
+            "최고 한강조망각이 기준 평형보다 더 큰 후보만 표시합니다. "
+            "조망이 기준 평형보다 떨어지는 하위 평형은 제외했습니다."
+        )
+        st.caption("조망 우위 대상: " + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs))
 
         reference_candidates = build_view_candidates(view_rows, zone_name, reference_normal_pyeongs)
         if reference_candidates.empty:
             st.info(
-                "하위 참고 평형은 계산되었지만 조망 요약 데이터와 매칭되는 유닛 타입이 없습니다: "
+                "조망 우위 참고 평형은 계산되었지만 조망 요약 데이터와 매칭되는 유닛 타입이 없습니다: "
                 + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs)
             )
         else:
