@@ -1209,6 +1209,128 @@ def lower_reference_pyeongs_by_view_order(
 
     return out
 
+
+
+def normalize_pyeong_label_for_compare(value) -> str:
+    """평형명 비교용 정규화. P 표기와 물결표 차이를 줄입니다."""
+    text = str(value or "").strip().upper()
+    text = text.replace("∼", "~").replace("～", "~")
+    text = re.sub(r"\s+", "", text)
+    return text
+
+
+def available_grade_order_ascending(range_info: dict, include_penthouse: bool = True) -> list[str]:
+    """분양표상 낮은 등급 → 높은 등급 순서의 조합원 선택 가능 평형 목록을 반환합니다."""
+    available_df = range_info.get("available_df", pd.DataFrame())
+    if not isinstance(available_df, pd.DataFrame) or available_df.empty:
+        return []
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for _, row in available_df.iterrows():
+        label = str(row.get("평형", "")).strip()
+        if not label or label == "-":
+            continue
+        if (not include_penthouse) and is_penthouse_pyeong(label):
+            continue
+        try:
+            member_units = int(row.get("조합원 가능세대", 0))
+        except Exception:
+            member_units = 0
+        if member_units <= 0:
+            continue
+
+        key = normalize_pyeong_label_for_compare(label)
+        if key in seen:
+            continue
+        out.append(label)
+        seen.add(key)
+    return out
+
+
+def pyeong_labels_overlap(a, b) -> bool:
+    """두 평형명이 같은 선택군인지 판정합니다. P 표기는 숫자만으로 일반 평형과 섞지 않습니다."""
+    a_text = normalize_pyeong_label_for_compare(a)
+    b_text = normalize_pyeong_label_for_compare(b)
+    if not a_text or not b_text:
+        return False
+    if a_text == b_text:
+        return True
+
+    a_is_p = is_penthouse_pyeong(a_text)
+    b_is_p = is_penthouse_pyeong(b_text)
+    if a_is_p or b_is_p:
+        return False
+
+    alo, ahi = pyeong_range(a_text)
+    blo, bhi = pyeong_range(b_text)
+    if alo is None or ahi is None or blo is None or bhi is None:
+        return False
+    return not (ahi < blo or bhi < alo)
+
+
+def lower_grade_pyeongs_for_penthouse_case(
+    range_info: dict,
+    primary_pyeongs: list[str],
+    max_steps: int = 5,
+) -> list[str]:
+    """펜트하우스만 예상 가능할 때, 바로 아래 등급들을 함께 안내합니다.
+
+    펜트하우스는 조망 GeoJSON에 별도 입력되지 않은 경우가 많으므로,
+    조망지도 타입 순서가 아니라 분양표상 등급 순서를 기준으로 아래 단계들을 잡습니다.
+    예: 2구역 P174~175 → P127~134 / P95~97 / P88 / 87 / 79.
+    """
+    order = available_grade_order_ascending(range_info, include_penthouse=True)
+    if not order or not primary_pyeongs:
+        return []
+
+    primary_positions: list[int] = []
+    for i, label in enumerate(order):
+        if any(pyeong_labels_overlap(label, p) for p in primary_pyeongs):
+            primary_positions.append(i)
+
+    if not primary_positions:
+        return []
+
+    # 예상 가능 평형이 여러 등급이면 그중 가장 낮은 등급 바로 아래부터 참고 후보로 봅니다.
+    anchor_index = min(primary_positions)
+    lower_desc = list(reversed(order[:anchor_index]))
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for label in lower_desc:
+        key = normalize_pyeong_label_for_compare(label)
+        if key in seen:
+            continue
+        out.append(label)
+        seen.add(key)
+        if len(out) >= max_steps:
+            break
+    return out
+
+
+def render_lower_grade_reference_summary(lower_grade_pyeongs: list[str]) -> None:
+    """펜트하우스 케이스의 하위 등급 참고 목록을 먼저 보여줍니다."""
+    if not lower_grade_pyeongs:
+        return
+
+    rows = []
+    for i, p in enumerate(lower_grade_pyeongs, start=1):
+        is_p = is_penthouse_pyeong(p)
+        rows.append({
+            "등급순서": i,
+            "참고평형": safe_display_text(p),
+            "구분": "펜트/특화(P)" if is_p else "일반층",
+            "조망처리": "P 후보 우선 표시, 조망 GeoJSON 미입력" if is_p else "하단 조망각 표 계산 대상",
+        })
+
+    st.markdown("#### 하위 등급 참고")
+    st.caption(
+        "최상위 펜트하우스 후보만 예상 가능할 때도 실제 선택 검토를 위해 바로 아래 등급들을 함께 표시합니다. "
+        "P 표시 평형은 조망지도에 별도 유닛이 없으면 일반층 조망표와 숫자만으로 섞지 않습니다."
+    )
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
 def lower_reference_pyeongs(
     range_info: dict,
     current_pyeong_value,
@@ -1326,6 +1448,98 @@ def render_penthouse_priority(penthouse_pyeongs: list[str]) -> None:
     st.dataframe(ph_df, use_container_width=True, hide_index=True)
 
 
+
+def view_angle_bucket_label(angle_value) -> tuple[int, str]:
+    """한강조망각을 10도 단위 구간으로 묶습니다.
+
+    계산은 층수 가중 확률입니다.
+    - 10도 이하는 첫 구간
+    - 이후는 10초과∼20도, 20초과∼30도 ... 방식으로 계산하되
+      화면에는 10∼20도, 20∼30도처럼 간결하게 표시합니다.
+    """
+    try:
+        angle = float(angle_value)
+    except Exception:
+        angle = 0.0
+
+    if angle <= 10:
+        return 0, "10도 이하"
+
+    upper = int(((angle - 0.000001) // 10 + 1) * 10)
+    lower = upper - 10
+    return upper, f"{lower}∼{upper}도"
+
+
+def build_view_angle_probability_report(group: pd.DataFrame) -> pd.DataFrame:
+    """평형별 조망각 구간 확률 리포트를 만듭니다.
+
+    확률은 같은 평형 안에서 해당 조망각 구간에 속한 미래층 수 / 전체 미래층 수입니다.
+    """
+    if group is None or group.empty:
+        return pd.DataFrame()
+
+    work = group.copy()
+    work["층수_num"] = pd.to_numeric(work.get("층수"), errors="coerce").fillna(0).astype(int)
+    work["angle_num"] = pd.to_numeric(work.get("한강조망각"), errors="coerce").fillna(0).astype(float)
+    total_floors = int(work["층수_num"].sum())
+    if total_floors <= 0:
+        return pd.DataFrame()
+
+    bucket_rows = []
+    for _, row in work.iterrows():
+        sort_key, label = view_angle_bucket_label(row.get("angle_num", 0))
+        bucket_rows.append({
+            "bucket_sort": sort_key,
+            "조망각 구간": label,
+            "층수": int(row.get("층수_num", 0)),
+            "한강조망각": float(row.get("angle_num", 0)),
+            "대표후보": f"{row.get('미래동', '')} {row.get('배치도 타입', '')} {row.get('미래층구간', '')}".strip(),
+        })
+
+    bdf = pd.DataFrame(bucket_rows)
+    if bdf.empty:
+        return pd.DataFrame()
+
+    report_rows = []
+    for (sort_key, label), sub in bdf.groupby(["bucket_sort", "조망각 구간"], sort=True):
+        floors = int(sub["층수"].sum())
+        prob = floors / total_floors * 100.0
+        max_angle = int(sub["한강조망각"].max())
+
+        # 같은 구간 안에서 조망각이 높은 대표 구간을 최대 3개까지 표시합니다.
+        reps = []
+        for _, rr in sub.sort_values(["한강조망각", "층수"], ascending=[False, False]).iterrows():
+            rep = str(rr.get("대표후보", "")).strip()
+            if rep and rep not in reps:
+                reps.append(rep)
+            if len(reps) >= 3:
+                break
+
+        report_rows.append({
+            "조망각 구간": label,
+            "층수": floors,
+            "추첨확률": f"{prob:.1f}%",
+            "구간 내 최고각": f"{max_angle}도",
+            "대표 구간": " / ".join(reps),
+            "_sort": int(sort_key),
+        })
+
+    report = pd.DataFrame(report_rows).sort_values("_sort", ascending=True).drop(columns=["_sort"]).reset_index(drop=True)
+    return report
+
+
+def render_view_angle_probability_report(group: pd.DataFrame) -> None:
+    report = build_view_angle_probability_report(group)
+    if report.empty:
+        return
+
+    st.markdown(
+        "<div style='margin:10px 0 4px 0; font-weight:850;'>조망각 구간별 추첨확률 리포트</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption("확률은 같은 평형 안에서 해당 조망각 구간에 속한 미래층 수 비중입니다.")
+    st.dataframe(report, use_container_width=True, hide_index=True)
+
 def render_grouped_view_tables(candidates: pd.DataFrame) -> None:
     """가능평형별로 조망 후보를 묶어 표시합니다."""
     if candidates.empty:
@@ -1377,6 +1591,7 @@ def render_grouped_view_tables(candidates: pd.DataFrame) -> None:
             "한강조망각", "최대연속각", "주요각도범위", "조망거리", "한강방향",
         ]
         st.dataframe(group[show_cols], use_container_width=True, hide_index=True)
+        render_view_angle_probability_report(group)
 
 
 def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_value) -> None:
@@ -1392,9 +1607,21 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
         return
 
     view_rows = load_view_summary()
-    reference_pyeongs = lower_reference_pyeongs(range_info, current_pyeong_value, possible_pyeongs, zone_name, view_rows)
     penthouse_pyeongs = [p for p in possible_pyeongs if is_penthouse_pyeong(p)]
     normal_pyeongs = [p for p in possible_pyeongs if not is_penthouse_pyeong(p)]
+
+    penthouse_lower_grade_pyeongs: list[str] = []
+    if penthouse_pyeongs and not normal_pyeongs:
+        # 최상위 펜트하우스 후보만 표시되는 케이스도 실제 선택 검토를 위해
+        # 분양표상 바로 아래 등급 몇 개를 함께 안내합니다.
+        penthouse_lower_grade_pyeongs = lower_grade_pyeongs_for_penthouse_case(
+            range_info,
+            penthouse_pyeongs,
+            max_steps=5,
+        )
+        reference_pyeongs = penthouse_lower_grade_pyeongs
+    else:
+        reference_pyeongs = lower_reference_pyeongs(range_info, current_pyeong_value, possible_pyeongs, zone_name, view_rows)
 
     if not view_rows:
         st.warning("조망 요약 데이터가 없습니다. data/view_summary.json 파일을 확인해 주세요.")
@@ -1408,6 +1635,7 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
 
     st.markdown("#### 예상 가능 평형 조망")
     render_penthouse_priority(penthouse_pyeongs)
+    render_lower_grade_reference_summary(penthouse_lower_grade_pyeongs)
 
     candidates = build_view_candidates(view_rows, zone_name, normal_pyeongs)
     if not normal_pyeongs:
@@ -1444,12 +1672,20 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
     reference_normal_pyeongs = [p for p in reference_pyeongs if not is_penthouse_pyeong(p)]
     if reference_normal_pyeongs:
         st.markdown("#### 하위 참고 조망 후보")
-        st.caption(
-            "아래 표는 펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 안에서, "
-            "조합원 선택 가능세대가 있고 조망각이 좋은 참고 후보입니다. "
-            "예상 가능 평형을 대체하는 추천이 아니라 하향 선택을 검토할 때 보는 보조 자료입니다."
-        )
-        st.caption("하위 참고 대상: " + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs))
+        if penthouse_lower_grade_pyeongs:
+            st.caption(
+                "아래 표는 최상위 펜트하우스 후보 아래 등급 중 조망지도에 일반층 유닛이 입력된 평형의 조망 참고자료입니다. "
+                "P 표시 하위 등급은 위의 하위 등급 참고표에 먼저 표시하고, 일반층 조망표와 숫자만으로 섞지 않습니다."
+            )
+            st.caption("전체 하위 참고 대상: " + " / ".join(safe_display_text(p) for p in reference_pyeongs))
+            st.caption("조망 계산 대상: " + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs))
+        else:
+            st.caption(
+                "아래 표는 펜트하우스를 제외하고 예상 가능 평형보다 낮은 2단계 안에서, "
+                "조합원 선택 가능세대가 있고 조망각이 좋은 참고 후보입니다. "
+                "예상 가능 평형을 대체하는 추천이 아니라 하향 선택을 검토할 때 보는 보조 자료입니다."
+            )
+            st.caption("하위 참고 대상: " + " / ".join(safe_display_text(p) for p in reference_normal_pyeongs))
 
         reference_candidates = build_view_candidates(view_rows, zone_name, reference_normal_pyeongs)
         if reference_candidates.empty:
