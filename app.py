@@ -525,6 +525,7 @@ ZONE4_TYPE_PYEONG_LABEL = {
     "84": "34평",
     "96": "40평",
     "105": "43평",
+    "47": "47평",
     "114": "47평",
     "115": "47평",
     "120": "49평",
@@ -540,6 +541,12 @@ ZONE4_TYPE_PYEONG_LABEL = {
     "P270": "P110평",
     "P420": "P172평",
 }
+
+ZONE4_VIEW_PYEONG_ORDER = [
+    "25평", "34평", "40평", "43평", "47평", "49평", "52평", "60평",
+    "63평", "67평", "68평", "72평", "74평", "77평",
+    "P94평", "P110평", "P172평",
+]
 
 
 def zone4_type_key(type_name: str) -> str:
@@ -903,6 +910,24 @@ def display_pyeong_for_view_unit(zone_name: str, unit_type: str) -> str:
     return safe_display_text(unit_type)
 
 
+def available_view_pyeongs(view_rows: list[dict], zone_name: str) -> list[str]:
+    """조망 요약 데이터에 실제 입력된 평형 표시 목록을 반환합니다."""
+    target_zone_id = zone_id_from_name(zone_name)
+    out: list[str] = []
+    for row in view_rows:
+        if str(row.get("zoneId", "")) != target_zone_id:
+            continue
+        p = display_pyeong_for_view_unit(zone_name, str(row.get("unitType", "")))
+        if p and p not in out:
+            out.append(p)
+
+    if normalize_zone_key(zone_name) == "4구역":
+        order = {p: i for i, p in enumerate(ZONE4_VIEW_PYEONG_ORDER)}
+        return sorted(out, key=lambda p: (order.get(p, 999), pyeong_number(p) or 0, p))
+
+    return sorted(out, key=lambda p: (pyeong_number(p) or 0, p))
+
+
 def is_penthouse_pyeong(value) -> bool:
     text = str(value or "").strip().upper().replace(" ", "")
     if not text:
@@ -1233,6 +1258,64 @@ def render_grouped_view_tables(candidates: pd.DataFrame) -> None:
             "한강조망각", "최대연속각", "주요각도범위", "조망거리", "한강방향",
         ]
         st.dataframe(group[show_cols], use_container_width=True, hide_index=True)
+        render_angle_probability_report(group)
+
+
+def angle_band_label(angle: float) -> tuple[int, str]:
+    try:
+        a = float(angle)
+    except Exception:
+        a = 0.0
+
+    if a <= 10:
+        return 0, "10도 이하"
+
+    start = int((a - 0.000001) // 10) * 10
+    end = start + 10
+    return start, f"{start}∼{end}도"
+
+
+def render_angle_probability_report(group: pd.DataFrame) -> None:
+    """평형별 조망 후보 하단에 조망각 구간별 확률 리포트를 표시합니다."""
+    if group.empty:
+        return
+
+    total_floors = int(pd.to_numeric(group["층수"], errors="coerce").fillna(0).sum())
+    if total_floors <= 0:
+        return
+
+    work = group.copy()
+    work["__층수"] = pd.to_numeric(work["층수"], errors="coerce").fillna(0).astype(int)
+    work["__한강조망각"] = pd.to_numeric(work["한강조망각"], errors="coerce").fillna(0)
+    work[["__band_order", "__band_label"]] = work["__한강조망각"].apply(
+        lambda x: pd.Series(angle_band_label(x))
+    )
+
+    rows = []
+    for (band_order, band_label), sub in work.groupby(["__band_order", "__band_label"], sort=True):
+        floor_count = int(sub["__층수"].sum())
+        if floor_count <= 0:
+            continue
+
+        best_idx = sub.sort_values(
+            ["__한강조망각", "최대연속각", "종료층"],
+            ascending=[False, False, False],
+        ).index[0]
+        best = sub.loc[best_idx]
+
+        rows.append({
+            "조망각 구간": band_label,
+            "층수": floor_count,
+            "추첨확률": f"{floor_count / total_floors * 100:.1f}%",
+            "구간 내 최고각": f"{int(best['__한강조망각'])}도",
+            "대표 후보": f"{best['미래동']} / 타입 {best['배치도 타입']} / {best['미래층구간']}",
+        })
+
+    if not rows:
+        return
+
+    st.markdown("**조망각 구간별 확률 리포트**")
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
 def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_value) -> None:
@@ -1269,10 +1352,13 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
     if not normal_pyeongs:
         st.caption("안전 진입 가능 평형이 펜트하우스 후보로만 구성되어 일반층 조망표는 생략합니다.")
     elif candidates.empty:
+        available = available_view_pyeongs(view_rows, zone_name)
         st.info(
             "예상 가능 평형과 조망 배치도 타입이 매칭되지 않았습니다. "
             "해당 평형의 미래 배치도 유닛이 조망 요약 데이터에 입력되어 있는지 확인해 주세요."
         )
+        if available:
+            st.caption("현재 조망 요약 데이터에 입력된 평형: " + " / ".join(safe_display_text(p) for p in available))
     else:
         matched_pyeongs = set(candidates["가능평형"].astype(str).unique().tolist())
         missing_pyeongs = [p for p in normal_pyeongs if safe_display_text(p) not in matched_pyeongs]
