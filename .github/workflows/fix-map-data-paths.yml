@@ -27,64 +27,115 @@ jobs:
           path = Path('index_view_candidates.html')
           text = path.read_text(encoding='utf-8')
 
-          start_marker = '    function applyPublicBaseMap(mapId = "street") {'
-          async_marker = '    async function applyPublicBaseMap(mapId = "street") {'
-          end_marker = '\n    function readStoredVworldKey()'
+          old_viewer = '''    const viewer = new Cesium.Viewer("cesiumContainer", {
+      animation: false,
+      timeline: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: true,
+      baseLayerPicker: false,
+      navigationHelpButton: false,
+      infoBox: false,
+      selectionIndicator: true,
+      sceneMode: Cesium.SceneMode.SCENE3D,
+      baseLayer: false,
+      terrainProvider: new Cesium.EllipsoidTerrainProvider()
+    });
 
-          start = text.find(async_marker)
-          if start < 0:
-              start = text.find(start_marker)
+    viewer.scene.globe.depthTestAgainstTerrain = false;'''
+
+          new_viewer = '''    const initialBaseProvider = new Cesium.UrlTemplateImageryProvider({
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      minimumLevel: 0,
+      maximumLevel: 19,
+      tilingScheme: new Cesium.WebMercatorTilingScheme(),
+      credit: "Esri World Street Map"
+    });
+
+    const viewer = new Cesium.Viewer("cesiumContainer", {
+      animation: false,
+      timeline: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: true,
+      baseLayerPicker: false,
+      navigationHelpButton: false,
+      infoBox: false,
+      selectionIndicator: true,
+      sceneMode: Cesium.SceneMode.SCENE3D,
+      baseLayer: new Cesium.ImageryLayer(initialBaseProvider),
+      terrainProvider: new Cesium.EllipsoidTerrainProvider()
+    });
+
+    viewer.scene.globe.show = true;
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+    viewer.scene.globe.depthTestAgainstTerrain = false;'''
+
+          if old_viewer not in text:
+              raise RuntimeError('viewer initialization block not found')
+          text = text.replace(old_viewer, new_viewer, 1)
+
+          start_candidates = [
+              '    async function applyPublicBaseMap(mapId = "street") {',
+              '    function applyPublicBaseMap(mapId = "street") {'
+          ]
+          start = -1
+          for marker in start_candidates:
+              start = text.find(marker)
+              if start >= 0:
+                  break
           if start < 0:
               raise RuntimeError('applyPublicBaseMap function not found')
 
+          end_marker = '\n    function readStoredVworldKey()'
           end = text.find(end_marker, start)
           if end < 0:
               raise RuntimeError('readStoredVworldKey marker not found')
 
-          replacement = '''    async function applyPublicBaseMap(mapId = "street") {
-            if (publicBaseLayer) {
-              viewer.imageryLayers.remove(publicBaseLayer, true);
-              publicBaseLayer = null;
-            }
+          replacement = '''    function applyPublicBaseMap(mapId = "street") {
+      if (publicBaseLayer) {
+        viewer.imageryLayers.remove(publicBaseLayer, true);
+        publicBaseLayer = null;
+      }
 
-            if (vworldLayer) {
-              viewer.imageryLayers.remove(vworldLayer, true);
-              vworldLayer = null;
-            }
+      if (vworldLayer) {
+        viewer.imageryLayers.remove(vworldLayer, true);
+        vworldLayer = null;
+      }
 
-            const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
-            setActiveMapButton(mapId);
-            setStatus(`${config.label} 배경을 불러오는 중입니다...`);
+      const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
+      const url = mapId === "satellite"
+        ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
 
-            try {
-              let provider;
-              if (mapId === "satellite") {
-                provider = await Cesium.createWorldImageryAsync({
-                  style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS
-                });
-              } else {
-                provider = await Cesium.createWorldImageryAsync({
-                  style: Cesium.IonWorldImageryStyle.ROAD
-                });
-              }
-              publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-              publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
-              viewer.scene.globe.baseColor = Cesium.Color.WHITE;
-              viewer.scene.requestRender();
-              setStatus(`${config.label} 배경을 적용했습니다.`);
-            } catch (error) {
-              console.error("Cesium ion 배경지도 로드 실패", error);
-              viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
-              setStatus(`배경지도 로드 실패: ${error.message}`);
-            }
-          }
-          '''
+      const provider = new Cesium.UrlTemplateImageryProvider({
+        url,
+        minimumLevel: 0,
+        maximumLevel: 19,
+        tilingScheme: new Cesium.WebMercatorTilingScheme(),
+        credit: mapId === "satellite" ? "Esri World Imagery" : "Esri World Street Map"
+      });
+
+      publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+      publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
+      viewer.scene.globe.show = true;
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+      viewer.scene.requestRender();
+      setActiveMapButton(mapId);
+      setStatus(`${config.label} 배경을 적용했습니다.`);
+    }
+'''
 
           text = text[:start] + replacement + text[end:]
+          text = text.replace(
+              'setTimeout(() => { applyPublicBaseMap("street"); }, 300);',
+              'setTimeout(() => { applyPublicBaseMap("street"); }, 300);'
+          )
           text = text.replace(
               'setTimeout(() => applyPublicBaseMap("street"), 300);',
               'setTimeout(() => { applyPublicBaseMap("street"); }, 300);'
           )
+
           path.write_text(text, encoding='utf-8')
           PY
 
@@ -97,5 +148,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index_view_candidates.html
-          git commit -m 'Fix embedded Cesium base map loader'
+          git commit -m 'Initialize Cesium with visible ArcGIS base layer'
           git push
