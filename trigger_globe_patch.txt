@@ -1,0 +1,1 @@
+trigger globe visibility patch 2026-07-10
