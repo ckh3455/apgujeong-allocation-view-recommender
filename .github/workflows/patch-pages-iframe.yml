@@ -1,0 +1,32 @@
+name: Switch map to GitHub Pages iframe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/patch_pages_iframe.py'
+      - '.trigger_pages_iframe_patch'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Patch app.py
+        run: python scripts/patch_pages_iframe.py
+      - name: Commit app.py
+        run: |
+          if git diff --quiet -- app.py; then
+            echo "No changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Use GitHub Pages candidate map iframe"
+          git push
