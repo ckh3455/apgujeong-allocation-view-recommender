@@ -3,6 +3,9 @@ from pathlib import Path
 path = Path("index_view_candidates.html")
 text = path.read_text(encoding="utf-8")
 
+# Any later code that hides the globe makes only the starry skybox visible.
+text = text.replace("viewer.scene.globe.show = false;", "viewer.scene.globe.show = true;")
+
 old_viewer = '''    const viewer = new Cesium.Viewer("cesiumContainer", {
       animation: false,
       timeline: false,
@@ -44,12 +47,31 @@ new_viewer = '''    const initialBaseProvider = new Cesium.UrlTemplateImageryPro
     });
 
     viewer.scene.globe.show = true;
+    viewer.scene.globe.enableLighting = false;
+    viewer.scene.globe.translucency.enabled = false;
     viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
-    viewer.scene.globe.depthTestAgainstTerrain = false;'''
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.preRender.addEventListener(() => {
+      if (!viewer.scene.globe.show) viewer.scene.globe.show = true;
+      if (viewer.scene.globe.translucency.enabled) viewer.scene.globe.translucency.enabled = false;
+    });'''
 
 if old_viewer in text:
     text = text.replace(old_viewer, new_viewer, 1)
-elif "const initialBaseProvider = new Cesium.UrlTemplateImageryProvider" not in text:
+elif "const initialBaseProvider = new Cesium.UrlTemplateImageryProvider" in text:
+    marker = '    viewer.scene.globe.depthTestAgainstTerrain = false;'
+    forced = '''    viewer.scene.globe.show = true;
+    viewer.scene.globe.enableLighting = false;
+    viewer.scene.globe.translucency.enabled = false;
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.preRender.addEventListener(() => {
+      if (!viewer.scene.globe.show) viewer.scene.globe.show = true;
+      if (viewer.scene.globe.translucency.enabled) viewer.scene.globe.translucency.enabled = false;
+    });'''
+    if "viewer.scene.preRender.addEventListener(() =>" not in text:
+        text = text.replace(marker, forced, 1)
+else:
     raise RuntimeError("viewer initialization block not found")
 
 start_markers = [
@@ -92,6 +114,8 @@ replacement = '''    function applyPublicBaseMap(mapId = "street") {
       publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
       publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
       viewer.scene.globe.show = true;
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.globe.translucency.enabled = false;
       viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
       viewer.scene.requestRender();
       setActiveMapButton(mapId);
