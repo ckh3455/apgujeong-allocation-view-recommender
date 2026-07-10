@@ -698,30 +698,43 @@
       }
     }
 
-    function applyPublicBaseMap(mapId = "street") {
-      if (publicBaseLayer) {
-        viewer.imageryLayers.remove(publicBaseLayer, true);
-        publicBaseLayer = null;
-      }
+    async function applyPublicBaseMap(mapId = "street") {
+  if (publicBaseLayer) {
+    viewer.imageryLayers.remove(publicBaseLayer, true);
+    publicBaseLayer = null;
+  }
 
-      if (vworldLayer) {
-        viewer.imageryLayers.remove(vworldLayer, true);
-        vworldLayer = null;
-      }
+  if (vworldLayer) {
+    viewer.imageryLayers.remove(vworldLayer, true);
+    vworldLayer = null;
+  }
 
-      const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
-      const provider = new Cesium.UrlTemplateImageryProvider({
-        url: config.url,
-        minimumLevel: 0,
-        maximumLevel: 19,
-        tilingScheme: new Cesium.WebMercatorTilingScheme(),
-        credit: config.credit
+  const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
+  setActiveMapButton(mapId);
+  setStatus(`${config.label} 배경을 불러오는 중입니다...`);
+
+  try {
+    let provider;
+    if (mapId === "satellite") {
+      provider = await Cesium.createWorldImageryAsync({
+        style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS
       });
-
-      publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-      setActiveMapButton(mapId);
-      setStatus(`${config.label} 배경을 적용했습니다.`);
+    } else {
+      provider = await Cesium.createWorldImageryAsync({
+        style: Cesium.IonWorldImageryStyle.ROAD
+      });
     }
+    publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+    publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
+    viewer.scene.globe.baseColor = Cesium.Color.WHITE;
+    viewer.scene.requestRender();
+    setStatus(`${config.label} 배경을 적용했습니다.`);
+  } catch (error) {
+    console.error("Cesium ion 배경지도 로드 실패", error);
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+    setStatus(`배경지도 로드 실패: ${error.message}`);
+  }
+}
 
     function readStoredVworldKey() {
       const params = new URLSearchParams(window.location.search);
@@ -3516,7 +3529,7 @@
       updateFloorTotalAngle(entity);
     });
 
-    setTimeout(() => applyPublicBaseMap("street"), 300);
+    setTimeout(() => { applyPublicBaseMap("street"); }, 300);
 
     loadZone(currentZoneId);
 
