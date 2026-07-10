@@ -1,8 +1,9 @@
-name: Fix embedded map resources
+name: Patch embedded Cesium map
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - '.github/workflows/fix-map-data-paths.yml'
   workflow_dispatch:
@@ -11,84 +12,90 @@ permissions:
   contents: write
 
 jobs:
-  fix-map:
+  patch-map:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Replace embedded map imagery loader
-        shell: python
+      - name: Patch index_view_candidates.html
         run: |
+          python - <<'PY'
           from pathlib import Path
 
-          path = Path("index_view_candidates.html")
-          text = path.read_text(encoding="utf-8")
+          path = Path('index_view_candidates.html')
+          text = path.read_text(encoding='utf-8')
 
-          start = text.index('    function applyPublicBaseMap(mapId = "street") {')
-          end = text.index('\n    function readStoredVworldKey()', start)
+          start_marker = '    function applyPublicBaseMap(mapId = "street") {'
+          async_marker = '    async function applyPublicBaseMap(mapId = "street") {'
+          end_marker = '\n    function readStoredVworldKey()'
+
+          start = text.find(async_marker)
+          if start < 0:
+              start = text.find(start_marker)
+          if start < 0:
+              raise RuntimeError('applyPublicBaseMap function not found')
+
+          end = text.find(end_marker, start)
+          if end < 0:
+              raise RuntimeError('readStoredVworldKey marker not found')
 
           replacement = '''    async function applyPublicBaseMap(mapId = "street") {
-      if (publicBaseLayer) {
-        viewer.imageryLayers.remove(publicBaseLayer, true);
-        publicBaseLayer = null;
-      }
+            if (publicBaseLayer) {
+              viewer.imageryLayers.remove(publicBaseLayer, true);
+              publicBaseLayer = null;
+            }
 
-      if (vworldLayer) {
-        viewer.imageryLayers.remove(vworldLayer, true);
-        vworldLayer = null;
-      }
+            if (vworldLayer) {
+              viewer.imageryLayers.remove(vworldLayer, true);
+              vworldLayer = null;
+            }
 
-      const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
-      setActiveMapButton(mapId);
-      setStatus(`${config.label} 배경을 불러오는 중입니다...`);
+            const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
+            setActiveMapButton(mapId);
+            setStatus(`${config.label} 배경을 불러오는 중입니다...`);
 
-      try {
-        const styleMap = {
-          street: Cesium.IonWorldImageryStyle.ROAD,
-          light: Cesium.IonWorldImageryStyle.ROAD,
-          satellite: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS
-        };
-        const provider = await Cesium.createWorldImageryAsync({
-          style: styleMap[mapId] || Cesium.IonWorldImageryStyle.ROAD
-        });
-        publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-        publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
-        viewer.scene.globe.baseColor = Cesium.Color.WHITE;
-        setStatus(`${config.label} 배경을 적용했습니다.`);
-      } catch (ionError) {
-        console.warn("Cesium ion 배경지도 실패, ArcGIS로 대체합니다.", ionError);
-        const fallbackUrl = mapId === "satellite"
-          ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
-        const fallback = new Cesium.UrlTemplateImageryProvider({
-          url: fallbackUrl,
-          minimumLevel: 0,
-          maximumLevel: 19,
-          tilingScheme: new Cesium.WebMercatorTilingScheme(),
-          credit: "Esri"
-        });
-        publicBaseLayer = viewer.imageryLayers.addImageryProvider(fallback, 0);
-        viewer.scene.globe.baseColor = Cesium.Color.WHITE;
-        setStatus(`${config.label} 배경을 대체 지도에서 적용했습니다.`);
-      }
-    }
-'''
+            try {
+              let provider;
+              if (mapId === "satellite") {
+                provider = await Cesium.createWorldImageryAsync({
+                  style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS
+                });
+              } else {
+                provider = await Cesium.createWorldImageryAsync({
+                  style: Cesium.IonWorldImageryStyle.ROAD
+                });
+              }
+              publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+              publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
+              viewer.scene.globe.baseColor = Cesium.Color.WHITE;
+              viewer.scene.requestRender();
+              setStatus(`${config.label} 배경을 적용했습니다.`);
+            } catch (error) {
+              console.error("Cesium ion 배경지도 로드 실패", error);
+              viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+              setStatus(`배경지도 로드 실패: ${error.message}`);
+            }
+          }
+          '''
 
           text = text[:start] + replacement + text[end:]
           text = text.replace(
               'setTimeout(() => applyPublicBaseMap("street"), 300);',
               'setTimeout(() => { applyPublicBaseMap("street"); }, 300);'
           )
-          path.write_text(text, encoding="utf-8")
+          path.write_text(text, encoding='utf-8')
+          PY
 
-      - name: Commit corrected imagery loader
+      - name: Commit patched map
         run: |
           if git diff --quiet -- index_view_candidates.html; then
-            echo "No imagery changes required."
+            echo 'No changes needed.'
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index_view_candidates.html
-          git commit -m "Use Cesium ion base imagery in embedded map"
+          git commit -m 'Fix embedded Cesium base map loader'
           git push
