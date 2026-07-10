@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   issues:
     types: [opened, reopened]
+  push:
+    paths:
+      - '.trigger_camera_unit_patch'
 
 permissions:
   contents: write
@@ -28,5 +31,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index_view_candidates.html
-          git commit -m "Initialize Cesium with visible ArcGIS base layer"
+          git commit -m "Fix camera and candidate unit visibility"
           git push
