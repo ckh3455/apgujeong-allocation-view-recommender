@@ -1,11 +1,8 @@
 name: Patch embedded Cesium map
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/fix-map-data-paths.yml'
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -71,9 +68,10 @@ jobs:
     viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
     viewer.scene.globe.depthTestAgainstTerrain = false;'''
 
-          if old_viewer not in text:
+          if old_viewer in text:
+              text = text.replace(old_viewer, new_viewer, 1)
+          elif 'const initialBaseProvider = new Cesium.UrlTemplateImageryProvider' not in text:
               raise RuntimeError('viewer initialization block not found')
-          text = text.replace(old_viewer, new_viewer, 1)
 
           start_candidates = [
               '    async function applyPublicBaseMap(mapId = "street") {',
@@ -126,11 +124,10 @@ jobs:
     }
 '''
 
-          text = text[:start] + replacement + text[end:]
-          text = text.replace(
-              'setTimeout(() => { applyPublicBaseMap("street"); }, 300);',
-              'setTimeout(() => { applyPublicBaseMap("street"); }, 300);'
-          )
+          current_function = text[start:end]
+          if current_function != replacement.rstrip('\n'):
+              text = text[:start] + replacement + text[end:]
+
           text = text.replace(
               'setTimeout(() => applyPublicBaseMap("street"), 300);',
               'setTimeout(() => { applyPublicBaseMap("street"); }, 300);'
