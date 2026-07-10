@@ -1,0 +1,1 @@
+Trigger corrected camera and candidate polygon patch.
