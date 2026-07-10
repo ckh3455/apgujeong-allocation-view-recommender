@@ -534,12 +534,13 @@
     const BLOCKER_PENTHOUSE_FLOORS = 1;
     const SAME_DONG_CORE_GAP_M = 10;
     const SAME_DONG_CORE_BRIDGE_STEP_M = 2.5;
+    const RAW_DATA_BASE = "https://raw.githubusercontent.com/ckh3455/apgujeong-allocation-view-recommender/main/";
     const OSM_CLIP_URLS = [
-      "apgujeong_zone_boundaries.geojson",
-      "apgujeong_osm_clipping_zones.geojson"
+      RAW_DATA_BASE + "apgujeong_zone_boundaries.geojson",
+      RAW_DATA_BASE + "apgujeong_osm_clipping_zones.geojson"
     ];
     const OSM_BUILDING_VERTICAL_OFFSET_M = Number(new URLSearchParams(window.location.search).get("osmOffset") || -62);
-    const ALL_RIVER_URL = "hangang_line_all.geojson";
+    const ALL_RIVER_URL = RAW_DATA_BASE + "hangang_line_all.geojson";
     const ZONE_CONFIGS = {
       "ALL": {
         label: "전체",
@@ -547,22 +548,22 @@
       },
       "2": {
         label: "2구역",
-        unitsUrl: "apgujeong_2_units.geojson",
+        unitsUrl: RAW_DATA_BASE + "apgujeong_2_units.geojson",
         riverUrl: ALL_RIVER_URL
       },
       "3": {
         label: "3구역",
-        unitsUrl: "apg3_unit_polygon.geojson",
+        unitsUrl: RAW_DATA_BASE + "apg3_unit_polygon.geojson",
         riverUrl: ALL_RIVER_URL
       },
       "4": {
         label: "4구역",
-        unitsUrl: "apgujeong_4_units.geojson",
+        unitsUrl: RAW_DATA_BASE + "apgujeong_4_units.geojson",
         riverUrl: ALL_RIVER_URL
       },
       "5": {
         label: "5구역",
-        unitsUrl: "apgujeong_5_units.geojson",
+        unitsUrl: RAW_DATA_BASE + "apgujeong_5_units.geojson",
         riverUrl: ALL_RIVER_URL
       }
     };
