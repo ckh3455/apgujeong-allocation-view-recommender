@@ -1,3 +1,4 @@
+import base64
 import json
 import re
 from datetime import datetime
@@ -1352,24 +1353,15 @@ def build_candidate_map_config(candidates: pd.DataFrame, zone_name: str) -> dict
 
 
 def render_candidate_map(candidates: pd.DataFrame, zone_name: str) -> None:
-    """조망후보를 표 대신 Cesium 유닛 지도에 표시합니다."""
+    """GitHub Pages의 정상 Cesium 지도를 iframe으로 열고 후보 설정을 URL로 전달합니다."""
     config = build_candidate_map_config(candidates, zone_name)
     if not config:
         st.info("지도에 표시할 조망후보 유닛이 없습니다.")
         return
 
-    html_path = next((p for p in VIEW_MAP_HTML_CANDIDATES if p.exists() and p.is_file()), None)
-    if html_path is None:
-        st.warning("조망 지도 HTML 파일을 찾지 못했습니다. index_view_candidates.html을 앱 폴더에 넣어 주세요.")
-        return
-
-    map_html = html_path.read_text(encoding="utf-8")
-    config_json = json.dumps(config, ensure_ascii=False).replace("</", "<\\/")
-    injection = f"<script>window.APJ_VIEW_CANDIDATE_CONFIG = {config_json};</script>"
-    if "</head>" in map_html:
-        map_html = map_html.replace("</head>", injection + "\n</head>", 1)
-    else:
-        map_html = injection + map_html
+    config_json = json.dumps(config, ensure_ascii=False, separators=(",", ":"))
+    encoded = base64.urlsafe_b64encode(config_json.encode("utf-8")).decode("ascii").rstrip("=")
+    map_url = f"https://ckh3455.github.io/APGUJEONG-VIEW/candidate.html?cfg={encoded}"
 
     unit_count = len(config["entries"])
     st.markdown(
@@ -1384,8 +1376,8 @@ def render_candidate_map(candidates: pd.DataFrame, zone_name: str) -> None:
         """,
         unsafe_allow_html=True,
     )
-    components.html(map_html, height=860, scrolling=False)
-    st.caption("지도 유닛을 클릭하면 기존 인덱스와 같은 조망각·층별 레이·눈높이 360도 회전 기능을 사용할 수 있습니다.")
+    components.iframe(map_url, height=860, scrolling=False)
+    st.caption("지도 유닛을 클릭하면 기존 GitHub Pages 지도와 같은 조망각·층별 레이·눈높이 360도 회전 기능을 사용할 수 있습니다.")
 
 
 def render_grouped_view_tables(candidates: pd.DataFrame) -> None:
