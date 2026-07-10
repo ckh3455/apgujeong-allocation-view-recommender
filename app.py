@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 # =========================
@@ -35,6 +36,10 @@ YEAR_RE = re.compile(r"^\d{4}$")
 
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = APP_DIR / "data"
+VIEW_MAP_HTML_CANDIDATES = [
+    APP_DIR / "index_view_candidates.html",
+    APP_DIR / "index.html",
+]
 VIEW_SUMMARY_CANDIDATES = [
     DATA_DIR / "view_summary.json",
     APP_DIR / "view_summary.json",
@@ -1300,6 +1305,89 @@ def render_penthouse_priority(penthouse_pyeongs: list[str]) -> None:
     st.dataframe(ph_df, use_container_width=True, hide_index=True)
 
 
+def build_candidate_map_config(candidates: pd.DataFrame, zone_name: str) -> dict:
+    """같은 평형의 고유 유닛 수를 기준으로 유닛별 균등 배정확률을 만듭니다."""
+    if candidates.empty:
+        return {}
+
+    unit_cols = ["가능평형", "미래동", "배치도 타입", "fid"]
+    units = candidates[unit_cols].drop_duplicates().copy()
+    units["fid"] = units["fid"].astype(str)
+    units = units[units["fid"].str.strip() != ""]
+    if units.empty:
+        return {}
+
+    counts = units.groupby("가능평형")["fid"].transform("nunique").clip(lower=1)
+    units["probability"] = (100.0 / counts).round(1)
+
+    # 각 유닛의 최고 조망각을 지도 상세정보에 함께 전달합니다.
+    best_angles = (
+        candidates.groupby(["가능평형", "fid"], dropna=False)["한강조망각"]
+        .max()
+        .to_dict()
+    )
+    entries = []
+    for _, row in units.iterrows():
+        pyeong = safe_display_text(row["가능평형"])
+        fid = str(row["fid"])
+        entries.append({
+            "fid": fid,
+            "pyeong": pyeong,
+            "dong": safe_display_text(row["미래동"]),
+            "unitType": safe_display_text(row["배치도 타입"]),
+            "probability": float(row["probability"]),
+            "bestViewAngle": int(best_angles.get((row["가능평형"], row["fid"]), 0) or 0),
+        })
+
+    pyeongs = sorted(units["가능평형"].astype(str).unique().tolist(), key=lambda x: (pyeong_number(x) or 0, x))
+    title = f"{'·'.join(safe_display_text(p) for p in pyeongs)} 조망후보"
+    return {
+        "enabled": True,
+        "zoneId": zone_id_from_name(zone_name),
+        "zoneName": normalize_zone_key(zone_name),
+        "title": title,
+        "entries": entries,
+        "bestFid": str(candidates.iloc[0].get("fid", "")),
+    }
+
+
+def render_candidate_map(candidates: pd.DataFrame, zone_name: str) -> None:
+    """조망후보를 표 대신 Cesium 유닛 지도에 표시합니다."""
+    config = build_candidate_map_config(candidates, zone_name)
+    if not config:
+        st.info("지도에 표시할 조망후보 유닛이 없습니다.")
+        return
+
+    html_path = next((p for p in VIEW_MAP_HTML_CANDIDATES if p.exists() and p.is_file()), None)
+    if html_path is None:
+        st.warning("조망 지도 HTML 파일을 찾지 못했습니다. index_view_candidates.html을 앱 폴더에 넣어 주세요.")
+        return
+
+    map_html = html_path.read_text(encoding="utf-8")
+    config_json = json.dumps(config, ensure_ascii=False).replace("</", "<\\/")
+    injection = f"<script>window.APJ_VIEW_CANDIDATE_CONFIG = {config_json};</script>"
+    if "</head>" in map_html:
+        map_html = map_html.replace("</head>", injection + "\n</head>", 1)
+    else:
+        map_html = injection + map_html
+
+    unit_count = len(config["entries"])
+    st.markdown(
+        f"""
+        <div style="margin:18px 0 8px;padding:11px 13px;border-left:5px solid #0b63d1;
+                    background:rgba(11,99,209,.055);border-radius:8px;line-height:1.55;">
+          <b>{config['title']}</b><br>
+          <span style="color:rgba(49,51,63,.78);font-weight:650;">
+            후보 유닛 {unit_count}개 · 각 평형 안에서 고유 유닛 수를 기준으로 균등 배정확률 표시
+          </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    components.html(map_html, height=860, scrolling=False)
+    st.caption("지도 유닛을 클릭하면 기존 인덱스와 같은 조망각·층별 레이·눈높이 360도 회전 기능을 사용할 수 있습니다.")
+
+
 def render_grouped_view_tables(candidates: pd.DataFrame) -> None:
     """가능평형별로 조망 후보를 묶어 표시합니다."""
     if candidates.empty:
@@ -1477,7 +1565,7 @@ def render_view_recommendation(zone_name: str, range_info: dict, current_pyeong_
             unsafe_allow_html=True,
         )
 
-        render_grouped_view_tables(candidates)
+        render_candidate_map(candidates, zone_name)
 
     if not candidates.empty:
         baseline_best_angle = float(pd.to_numeric(candidates["한강조망각"], errors="coerce").max())
