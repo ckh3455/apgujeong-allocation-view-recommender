@@ -3,131 +3,55 @@ from pathlib import Path
 path = Path("index_view_candidates.html")
 text = path.read_text(encoding="utf-8")
 
-# Any later code that hides the globe makes only the starry skybox visible.
+# Globe must remain visible.
 text = text.replace("viewer.scene.globe.show = false;", "viewer.scene.globe.show = true;")
 
-old_viewer = '''    const viewer = new Cesium.Viewer("cesiumContainer", {
-      animation: false,
-      timeline: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: true,
-      baseLayerPicker: false,
-      navigationHelpButton: false,
-      infoBox: false,
-      selectionIndicator: true,
-      sceneMode: Cesium.SceneMode.SCENE3D,
-      baseLayer: false,
-      terrainProvider: new Cesium.EllipsoidTerrainProvider()
-    });
-
-    viewer.scene.globe.depthTestAgainstTerrain = false;'''
-
-new_viewer = '''    const initialBaseProvider = new Cesium.UrlTemplateImageryProvider({
-      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-      minimumLevel: 0,
-      maximumLevel: 19,
-      tilingScheme: new Cesium.WebMercatorTilingScheme(),
-      credit: "Esri World Street Map"
-    });
-
-    const viewer = new Cesium.Viewer("cesiumContainer", {
-      animation: false,
-      timeline: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: true,
-      baseLayerPicker: false,
-      navigationHelpButton: false,
-      infoBox: false,
-      selectionIndicator: true,
-      sceneMode: Cesium.SceneMode.SCENE3D,
-      baseLayer: new Cesium.ImageryLayer(initialBaseProvider),
-      terrainProvider: new Cesium.EllipsoidTerrainProvider()
-    });
-
-    viewer.scene.globe.show = true;
-    viewer.scene.globe.enableLighting = false;
-    viewer.scene.globe.translucency.enabled = false;
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
-    viewer.scene.globe.depthTestAgainstTerrain = false;
-    viewer.scene.preRender.addEventListener(() => {
-      if (!viewer.scene.globe.show) viewer.scene.globe.show = true;
-      if (viewer.scene.globe.translucency.enabled) viewer.scene.globe.translucency.enabled = false;
-    });'''
-
-if old_viewer in text:
-    text = text.replace(old_viewer, new_viewer, 1)
-elif "const initialBaseProvider = new Cesium.UrlTemplateImageryProvider" in text:
-    marker = '    viewer.scene.globe.depthTestAgainstTerrain = false;'
-    forced = '''    viewer.scene.globe.show = true;
-    viewer.scene.globe.enableLighting = false;
-    viewer.scene.globe.translucency.enabled = false;
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
-    viewer.scene.globe.depthTestAgainstTerrain = false;
-    viewer.scene.preRender.addEventListener(() => {
-      if (!viewer.scene.globe.show) viewer.scene.globe.show = true;
-      if (viewer.scene.globe.translucency.enabled) viewer.scene.globe.translucency.enabled = false;
-    });'''
-    if "viewer.scene.preRender.addEventListener(() =>" not in text:
-        text = text.replace(marker, forced, 1)
-else:
-    raise RuntimeError("viewer initialization block not found")
-
-start_markers = [
-    '    async function applyPublicBaseMap(mapId = "street") {',
-    '    function applyPublicBaseMap(mapId = "street") {',
-]
-start = next((text.find(marker) for marker in start_markers if text.find(marker) >= 0), -1)
-if start < 0:
-    raise RuntimeError("applyPublicBaseMap function not found")
-
-end_marker = "\n    function readStoredVworldKey()"
-end = text.find(end_marker, start)
-if end < 0:
-    raise RuntimeError("readStoredVworldKey marker not found")
-
-replacement = '''    function applyPublicBaseMap(mapId = "street") {
-      if (publicBaseLayer) {
-        viewer.imageryLayers.remove(publicBaseLayer, true);
-        publicBaseLayer = null;
-      }
-
-      if (vworldLayer) {
-        viewer.imageryLayers.remove(vworldLayer, true);
-        vworldLayer = null;
-      }
-
-      const config = MAP_CONFIGS[mapId] || MAP_CONFIGS.street;
-      const url = mapId === "satellite"
-        ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
-
-      const provider = new Cesium.UrlTemplateImageryProvider({
-        url,
-        minimumLevel: 0,
-        maximumLevel: 19,
-        tilingScheme: new Cesium.WebMercatorTilingScheme(),
-        credit: mapId === "satellite" ? "Esri World Imagery" : "Esri World Street Map"
+# Remove the candidate-entity zoom that can place the camera below the ellipsoid.
+old_zoom = '''      await viewer.zoomTo(candidateEntities.length ? candidateEntities : source, new Cesium.HeadingPitchRange(
+        Cesium.Math.toRadians(335),
+        Cesium.Math.toRadians(-45),
+        candidateEntities.length ? 650 : 900
+      ));'''
+new_zoom = '''      viewer.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(127.03255, 37.52545, 920),
+        orientation: {
+          heading: Cesium.Math.toRadians(335),
+          pitch: Cesium.Math.toRadians(-58),
+          roll: 0
+        }
       });
-
-      publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-      publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
       viewer.scene.globe.show = true;
-      viewer.scene.globe.enableLighting = false;
-      viewer.scene.globe.translucency.enabled = false;
-      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
-      viewer.scene.requestRender();
-      setActiveMapButton(mapId);
-      setStatus(`${config.label} 배경을 적용했습니다.`);
-    }
-'''
+      viewer.scene.requestRender();'''
+if old_zoom in text:
+    text = text.replace(old_zoom, new_zoom, 1)
 
-text = text[:start] + replacement + text[end:]
-text = text.replace(
-    'setTimeout(() => applyPublicBaseMap("street"), 300);',
-    'setTimeout(() => { applyPublicBaseMap("street"); }, 300);',
-)
+# After applying candidate presentation, make the actual extruded polygons visible and opaque.
+old_candidate = '''        candidateEntities = applyCandidatePresentation();
+      }'''
+new_candidate = '''        candidateEntities = applyCandidatePresentation();
+        for (const candidateEntity of candidateEntities) {
+          candidateEntity.show = true;
+          if (candidateEntity.polygon) {
+            candidateEntity.polygon.show = true;
+            candidateEntity.polygon.material = candidateEntity.baseColor || Cesium.Color.fromCssColorString("#ef4444");
+            candidateEntity.polygon.outline = true;
+            candidateEntity.polygon.outlineColor = Cesium.Color.BLACK;
+          }
+        }
+      }'''
+if old_candidate in text:
+    text = text.replace(old_candidate, new_candidate, 1)
+
+# Keep the globe and lighting stable after map changes.
+map_anchor = '''      viewer.scene.globe.translucency.enabled = false;
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+      viewer.scene.requestRender();'''
+map_replacement = '''      viewer.scene.globe.translucency.enabled = false;
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+      viewer.scene.requestRender();'''
+if map_anchor in text:
+    text = text.replace(map_anchor, map_replacement, 1)
 
 path.write_text(text, encoding="utf-8")
-print("Patched index_view_candidates.html")
+print("Patched camera and candidate polygon visibility")
