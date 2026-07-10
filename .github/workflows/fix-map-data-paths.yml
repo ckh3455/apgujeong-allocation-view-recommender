@@ -21,4 +21,38 @@ jobs:
         run: |
           from pathlib import Path
 
-          path =
+          path = Path("index_view_candidates.html")
+          text = path.read_text(encoding="utf-8")
+          base = "https://raw.githubusercontent.com/ckh3455/apgujeong-allocation-view-recommender/main/"
+
+          replacements = {
+              'const OSM_CLIP_URLS = [\n      "apgujeong_zone_boundaries.geojson",\n      "apgujeong_osm_clipping_zones.geojson"\n    ];':
+                  f'const RAW_DATA_BASE = "{base}";\n    const OSM_CLIP_URLS = [\n      RAW_DATA_BASE + "apgujeong_zone_boundaries.geojson",\n      RAW_DATA_BASE + "apgujeong_osm_clipping_zones.geojson"\n    ];',
+              'const ALL_RIVER_URL = "hangang_line_all.geojson";':
+                  'const ALL_RIVER_URL = RAW_DATA_BASE + "hangang_line_all.geojson";',
+              'unitsUrl: "apgujeong_2_units.geojson"':
+                  'unitsUrl: RAW_DATA_BASE + "apgujeong_2_units.geojson"',
+              'unitsUrl: "apg3_unit_polygon.geojson"':
+                  'unitsUrl: RAW_DATA_BASE + "apg3_unit_polygon.geojson"',
+              'unitsUrl: "apgujeong_4_units.geojson"':
+                  'unitsUrl: RAW_DATA_BASE + "apgujeong_4_units.geojson"',
+              'unitsUrl: "apgujeong_5_units.geojson"':
+                  'unitsUrl: RAW_DATA_BASE + "apgujeong_5_units.geojson"',
+          }
+
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Commit corrected map paths
+        run: |
+          if git diff --quiet -- index_view_candidates.html; then
+            echo "No path changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index_view_candidates.html
+          git commit -m "Fix embedded map GeoJSON URLs"
+          git push
