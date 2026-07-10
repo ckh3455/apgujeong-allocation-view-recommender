@@ -622,7 +622,15 @@
 
     viewer.scene.globe.show = true;
     viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
+    viewer.scene.globe.show = true;
+    viewer.scene.globe.enableLighting = false;
+    viewer.scene.globe.translucency.enabled = false;
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
     viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.preRender.addEventListener(() => {
+      if (!viewer.scene.globe.show) viewer.scene.globe.show = true;
+      if (viewer.scene.globe.translucency.enabled) viewer.scene.globe.translucency.enabled = false;
+    });
     function enable3DControls() {
       const controller = viewer.scene.screenSpaceCameraController;
       controller.enableInputs = true;
@@ -735,6 +743,8 @@
       publicBaseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
       publicBaseLayer.alpha = mapId === "light" ? 0.72 : 1.0;
       viewer.scene.globe.show = true;
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.globe.translucency.enabled = false;
       viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#d9e3ec");
       viewer.scene.requestRender();
       setActiveMapButton(mapId);
