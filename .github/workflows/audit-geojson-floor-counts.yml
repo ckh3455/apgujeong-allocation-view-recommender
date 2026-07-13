@@ -1,0 +1,35 @@
+name: Audit GeoJSON floor counts
+
+on:
+  push:
+    paths:
+      - tools/audit_geojson_floor_counts.py
+      - .github/workflows/audit-geojson-floor-counts.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ckh3455/APGUJEONG-VIEW
+          ref: main
+          path: current-view
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/audit_geojson_floor_counts.py > data/geojson_floor_count_audit.log
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/geojson_floor_count_audit.json data/geojson_floor_count_audit.log
+          if ! git diff --cached --quiet; then
+            git commit -m "Audit GeoJSON floor counts"
+            git push
+          fi
