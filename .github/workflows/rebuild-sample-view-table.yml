@@ -1,0 +1,33 @@
+name: Rebuild sample-count view table
+
+on:
+  push:
+    paths:
+      - .github/workflows/rebuild-sample-view-table.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Aggregate exact app angles by view samples
+        run: python tools/aggregate_exact_app_view_by_physical_households.py
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/exact_app_view_by_physical_households.json data/exact_app_view_by_physical_households.csv data/exact_app_view_by_physical_households.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Use view sample counts in angle table"
+            git push
+          fi
