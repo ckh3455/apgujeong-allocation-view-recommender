@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - tools/generate_view_summary_from_current_index.js
+      - tools/aggregate_exact_app_view_by_physical_households.py
       - .github/workflows/generate-current-view-summary.yml
   workflow_dispatch:
 
@@ -13,7 +14,7 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Checkout recommender
@@ -32,6 +33,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install Playwright
         run: |
@@ -53,17 +59,21 @@ jobs:
           echo 'Local index server did not start.' >&2
           exit 1
 
-      - name: Calculate zones 3, 4 and 5
+      - name: Calculate zones 2, 3, 4 and 5 with exact app engine
         id: calculate
         continue-on-error: true
         env:
           SOURCE_URL: http://127.0.0.1:8000/index_v55_zone_cache_light.html?summaryBuild=1
-          TARGET_ZONES: 3,4,5
+          TARGET_ZONES: 2,3,4,5
           VIEW_MODE: conservative
         run: |
           set +e
           node tools/generate_view_summary_from_current_index.js > data/generate_view_summary.log 2>&1
           code=$?
+          if [ "$code" -eq 0 ]; then
+            python tools/aggregate_exact_app_view_by_physical_households.py >> data/generate_view_summary.log 2>&1
+            code=$?
+          fi
           echo "$code" > data/generate_view_summary.status
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           cat data/generate_view_summary.log
@@ -74,11 +84,13 @@ jobs:
           rm -f data/current_index_server.pid
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/view_summary.json data/view_unit_rows.csv data/view_floor_rows.csv data/generate_view_summary.log data/generate_view_summary.status data/current_index_server.log
+          git add data/view_summary.json data/view_unit_rows.csv data/view_floor_rows.csv
+          git add data/exact_app_view_by_physical_households.json data/exact_app_view_by_physical_households.csv data/exact_app_view_by_physical_households.md
+          git add data/generate_view_summary.log data/generate_view_summary.status data/current_index_server.log
           if git diff --cached --quiet; then
             echo "No generated changes."
           else
-            git commit -m "Generate zones 3-5 view summary from current index"
+            git commit -m "Generate exact app view angles for zones 2-5"
             git push
           fi
 
