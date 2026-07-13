@@ -26,9 +26,14 @@ for excel_row, raw in enumerate(rows[header_idx + 1:], start=header_idx + 2):
     ho = parse_int(item.get("호"))
     price = parse_numeric(item.get(YEAR))
 
-    # 원본 내장 자료의 단일 입력 누락: 2구역 신현대 112동 206호
+    # 원본 내장 자료 입력 보정 1: 2구역 신현대 112동 206호의 호수 공란
     if zone == "2구역" and complex_name == "신현대" and dong == 112 and ho is None and price == 69.38:
         ho = 206
+
+    # 원본 내장 자료 입력 보정 2: 3구역 현대1,2차 21동 705호가 두 번 기록됨.
+    # 701~706호 배열상 두 번째 705호(엑셀 9790행)는 706호입니다.
+    if zone == "3구역" and complex_name == "현대1,2차" and dong == 21 and ho == 705 and excel_row == 9790:
+        ho = 706
 
     if not complex_name or dong is None or ho is None or price is None:
         continue
