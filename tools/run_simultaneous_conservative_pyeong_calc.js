@@ -25,8 +25,6 @@ if (idx < 0) throw new Error('Calculation tail marker not found');
 
 const tail = String.raw`
 function displayPyeong(_zoneId, unitType) {
-  // 어제 확정한 표와 동일하게 GeoJSON의 unit_type 표시값을 그대로 사용합니다.
-  // 특히 4구역 47A와 47B를 합치지 않습니다.
   return String(unitType || '').trim();
 }
 
@@ -191,11 +189,11 @@ const esc = v => {
 fs.writeFileSync(${JSON.stringify(OUT_CSV)}, '\uFEFF' + headers.join(',') + '\n' + csvRows.map(r => headers.map(h => esc(r[h])).join(',')).join('\n') + '\n', 'utf8');
 const md = [
   '# 2·3·4·5구역 동시 계산 보수적 한강 조망각', '',
-  '- 한강라인: `hangang_line_all.geojson`',
-  '- 외벽 표본 간격: `' + FACADE_SAMPLE_STEP_M + 'm`',
-  '- 방위각: `1° 단위`',
-  '- 차폐: `2·3·4·5구역 전체 건물 동시 반영`',
-  '- 계산단위: `unit_type 쉼표 분리 개수 × 층수`', '',
+  '- 한강라인: hangang_line_all.geojson',
+  '- 외벽 표본 간격: ' + FACADE_SAMPLE_STEP_M + 'm',
+  '- 방위각: 1° 단위',
+  '- 차폐: 2·3·4·5구역 전체 건물 동시 반영',
+  '- 계산단위: unit_type 쉼표 분리 개수 × 층수', '',
   '| 구역 | 평형 | 계산단위 | 평균각 | 최소~최대 | 특A | A | A이상 | B | B이상 | C | D | E | B미만 |',
   '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
 ];
