@@ -22,15 +22,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Generate embedded adjusted prices
-        run: python tools/generate_embedded_rank_prices.py | tee data/rank_prices_2026_embedded.log
-      - name: Patch app to use embedded prices
-        run: python tools/patch_app_embedded_rank_prices.py
-      - name: Validate Python syntax
-        run: python -m py_compile app.py
-      - name: Validate generated coverage
+      - name: Generate, patch and validate
+        id: build
+        continue-on-error: true
         run: |
-          python - <<'PY'
+          set +e
+          : > data/rank_prices_2026_embedded.log
+          python tools/generate_embedded_rank_prices.py >> data/rank_prices_2026_embedded.log 2>&1
+          generate_code=$?
+          echo "generate_code=$generate_code" >> data/rank_prices_2026_embedded.log
+
+          if [ "$generate_code" -eq 0 ]; then
+            python tools/patch_app_embedded_rank_prices.py >> data/rank_prices_2026_embedded.log 2>&1
+            patch_code=$?
+          else
+            patch_code=99
+          fi
+          echo "patch_code=$patch_code" >> data/rank_prices_2026_embedded.log
+
+          if [ "$patch_code" -eq 0 ]; then
+            python -m py_compile app.py >> data/rank_prices_2026_embedded.log 2>&1
+            syntax_code=$?
+          else
+            syntax_code=99
+          fi
+          echo "syntax_code=$syntax_code" >> data/rank_prices_2026_embedded.log
+
+          if [ "$syntax_code" -eq 0 ]; then
+            python - <<'PY' >> data/rank_prices_2026_embedded.log 2>&1
           import csv
           from collections import Counter
           counts = Counter()
@@ -48,14 +67,34 @@ jobs:
           if counts != expected:
               raise SystemExit(f'coverage mismatch: {counts} != {expected}')
           PY
-      - name: Commit embedded data and app changes
+            validate_code=$?
+          else
+            validate_code=99
+          fi
+          echo "validate_code=$validate_code" >> data/rank_prices_2026_embedded.log
+
+          final_code=0
+          for code in "$generate_code" "$patch_code" "$syntax_code" "$validate_code"; do
+            if [ "$code" -ne 0 ]; then final_code=$code; break; fi
+          done
+          echo "$final_code" > data/rank_prices_2026_embedded.status
+          echo "exit_code=$final_code" >> "$GITHUB_OUTPUT"
+          cat data/rank_prices_2026_embedded.log
+          exit 0
+      - name: Commit data, app and logs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.py data/rank_prices_2026_embedded.csv data/rank_prices_2026_embedded.log
+          git add app.py data/rank_prices_2026_embedded.log data/rank_prices_2026_embedded.status
+          if [ -f data/rank_prices_2026_embedded.csv ]; then git add data/rank_prices_2026_embedded.csv; fi
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Use embedded adjusted 2026 rank prices"
+            git commit -m "Build embedded adjusted 2026 rank prices"
             git push
           fi
+      - name: Fail when build failed
+        if: steps.build.outputs.exit_code != '0'
+        run: |
+          echo "Embedded rank-price build failed. See data/rank_prices_2026_embedded.log"
+          exit 1
