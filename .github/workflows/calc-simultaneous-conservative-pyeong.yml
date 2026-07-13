@@ -44,7 +44,10 @@ jobs:
           rm -f data/_simultaneous_conservative_calc.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/simultaneous_conservative_view_by_pyeong.json data/simultaneous_conservative_view_by_pyeong.csv data/simultaneous_conservative_view_by_pyeong.md data/simultaneous_conservative_view_by_pyeong.log data/simultaneous_conservative_view_by_pyeong.status
+          git add data/simultaneous_conservative_view_by_pyeong.log data/simultaneous_conservative_view_by_pyeong.status
+          for f in data/simultaneous_conservative_view_by_pyeong.json data/simultaneous_conservative_view_by_pyeong.csv data/simultaneous_conservative_view_by_pyeong.md; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
           if git diff --cached --quiet; then
             echo "No changes"
           else
