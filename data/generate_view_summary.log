@@ -1,23 +1,23 @@
 Loading http://127.0.0.1:8000/index_v55_zone_cache_light.html?summaryBuild=1
 [browser:warning] A parser-blocking, cross site (i.e. different eTLD+1) script, https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js, is invoked via document.write. The network request for this script MAY be blocked by the browser in this or a future page load due to poor network connectivity. If blocked in this page load, it will be confirmed in a subsequent console message. See https://www.chromestatus.com/feature/5718547946799104 for more details.
 [browser:warning] A parser-blocking, cross site (i.e. different eTLD+1) script, https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js, is invoked via document.write. The network request for this script MAY be blocked by the browser in this or a future page load due to poor network connectivity. If blocked in this page load, it will be confirmed in a subsequent console message. See https://www.chromestatus.com/feature/5718547946799104 for more details.
-[requestfailed] net::ERR_ABORTED https://www.google-analytics.com/g/collect?v=2&tid=G-7G97GY46BX&gtm=45je6781v9256848832za200zd9256848832&_p=1783930424566&gcd=13l3l3l3l1l1&npa=0&dma=0&are=1&cid=1521398153.1783930425&frm=0&pscdl=noapi&rcb=9&sr=1440x900&uaa=x86&uab=64&uafvl=Chromium%3B136.0.7103.25%7CHeadlessChrome%3B136.0.7103.25%7CNot.A%252FBrand%3B99.0.0.0&uam=&uamb=0&uap=Linux&uapv=6.17.0&uaw=0&ul=en-us%40posix&_s=1&tag_exp=115938465~115938469~118395334~118826209~118897920~118897930~119027224&sid=1783930424&sct=1&seg=0&dl=http%3A%2F%2F127.0.0.1%2Findex_v55_zone_cache_light.html%3FsummaryBuild%3D1&dt=%EC%95%95%EA%B5%AC%EC%A0%95%20%EC%A1%B0%EB%A7%9D%20%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%EC%85%98&en=page_view&_fv=1&_nsi=1&_ss=1&_ee=1&tfd=190
-[browser:warning] [GroupMarkerNotSet(crbug.com/242999)!:A0B01B00A41A0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
-[browser:warning] [.WebGL-0x259c0378dc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
-[browser:warning] [.WebGL-0x259c0378dc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
-[browser:warning] [.WebGL-0x259c0378dc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[requestfailed] net::ERR_ABORTED https://www.google-analytics.com/g/collect?v=2&tid=G-7G97GY46BX&gtm=45je6781v9256848832za200zd9256848832&_p=1783954450695&gcd=13l3l3l3l1l1&npa=0&dma=0&are=1&cid=1580238741.1783954452&frm=0&ngs=1&pscdl=noapi&rcb=12&sr=1440x900&uaa=x86&uab=64&uafvl=Chromium%3B136.0.7103.25%7CHeadlessChrome%3B136.0.7103.25%7CNot.A%252FBrand%3B99.0.0.0&uam=&uamb=0&uap=Linux&uapv=6.17.0&uaw=0&ul=en-us%40posix&_s=1&tag_exp=115938465~115938468~118826210~118897920~118897930~119027224~119724320&sid=1783954452&sct=1&seg=0&dl=http%3A%2F%2F127.0.0.1%2Findex_v55_zone_cache_light.html%3FsummaryBuild%3D1&dt=%EC%95%95%EA%B5%AC%EC%A0%95%20%EC%A1%B0%EB%A7%9D%20%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%EC%85%98&en=page_view&_fv=1&_nsi=1&_ss=1&_ee=1&tfd=1412
+[browser:warning] [GroupMarkerNotSet(crbug.com/242999)!:A0B01B0084250000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[browser:warning] [.WebGL-0xa7c0328c700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[browser:warning] [.WebGL-0xa7c0328c700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[browser:warning] [.WebGL-0xa7c0328c700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
 Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","relaxed"]}
-=== 3구역 계산 시작 ===
-[browser:warning] [.WebGL-0x259c0378dc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+=== 2구역 계산 시작 ===
+[browser:warning] [.WebGL-0xa7c0328c700]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 1 Y: 0 Level: 1.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 1 Y: 1 Level: 1.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 0 Y: 0 Level: 0.
-[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 0 Y: 0 Level: 1.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 0 Y: 1 Level: 1.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 0 Y: 0 Level: 0.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 3 Y: 0 Level: 2.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -25,7 +25,6 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 6 Y: 2 Level: 3.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[requestfailed] net::ERR_ABORTED https://www.google-analytics.com/g/collect?v=2&tid=G-7G97GY46BX&gtm=45je6781v9256848832za200zd9256848832&_p=1783930424566&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=AEAAAAQ&ae=a&are=1&cid=1521398153.1783930425&frm=0&pscdl=noapi&rcb=9&sr=1440x900&uaa=x86&uab=64&uafvl=Chromium%3B136.0.7103.25%7CHeadlessChrome%3B136.0.7103.25%7CNot.A%252FBrand%3B99.0.0.0&uam=&uamb=0&uap=Linux&uapv=6.17.0&uaw=0&ul=en-us%40posix&_s=2&tag_exp=115938465~115938469~118395334~118826209~118897920~118897930~119027224&sid=1783930424&sct=1&seg=0&dl=http%3A%2F%2F127.0.0.1%2Findex_v55_zone_cache_light.html%3FsummaryBuild%3D1&dt=%EC%95%95%EA%B5%AC%EC%A0%95%20%EC%A1%B0%EB%A7%9D%20%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%EC%85%98&en=scroll&epn.percent_scrolled=90&_et=10&tfd=5761
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 6 Y: 3 Level: 3.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 13 Y: 5 Level: 4.
@@ -34,6 +33,7 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27 Y: 11 Level: 5.
 [browser:error] Failed to load resource: net::ERR_FAILED
+[requestfailed] net::ERR_ABORTED https://www.google-analytics.com/g/collect?v=2&tid=G-7G97GY46BX&gtm=45je6781v9256848832za200zd9256848832&_p=1783954450695&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=AEAAAAQ&ae=a&are=1&cid=1580238741.1783954452&frm=0&ngs=1&pscdl=noapi&rcb=12&sr=1440x900&uaa=x86&uab=64&uafvl=Chromium%3B136.0.7103.25%7CHeadlessChrome%3B136.0.7103.25%7CNot.A%252FBrand%3B99.0.0.0&uam=&uamb=0&uap=Linux&uapv=6.17.0&uaw=0&ul=en-us%40posix&_s=2&tag_exp=115938465~115938468~118826210~118897920~118897930~119027224~119724320&sid=1783954452&sct=1&seg=0&dl=http%3A%2F%2F127.0.0.1%2Findex_v55_zone_cache_light.html%3FsummaryBuild%3D1&dt=%EC%95%95%EA%B5%AC%EC%A0%95%20%EC%A1%B0%EB%A7%9D%20%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%EC%85%98&en=scroll&epn.percent_scrolled=90&_et=6&tfd=7094
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27 Y: 12 Level: 5.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 54 Y: 24 Level: 6.
@@ -74,11 +74,17 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 3493 Y: 1586 Level: 12.
 [browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 3492 Y: 1585 Level: 12.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 3492 Y: 1586 Level: 12.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 3493 Y: 1587 Level: 12.
+[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 6986 Y: 3172 Level: 13.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 6986 Y: 3173 Level: 13.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 3493 Y: 1587 Level: 12.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 6986 Y: 3174 Level: 13.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 13973 Y: 6345 Level: 14.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -96,29 +102,11 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 13972 Y: 6348 Level: 14.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 6986 Y: 3174 Level: 13.
-[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27946 Y: 12693 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27946 Y: 12694 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27946 Y: 12695 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25387 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25388 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25387 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25388 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55894 Y: 25387 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55894 Y: 25388 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55891 Y: 25387 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55891 Y: 25388 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111786 Y: 50775 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -138,23 +126,41 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111786 Y: 50777 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111787 Y: 50777 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111784 Y: 50775 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111784 Y: 50776 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111785 Y: 50777 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111788 Y: 50777 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111789 Y: 50775 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111789 Y: 50776 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27946 Y: 12692 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111787 Y: 50777 Level: 17.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12692 Level: 15.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25387 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25388 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25387 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25388 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55894 Y: 25387 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55894 Y: 25388 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25384 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25385 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25386 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25384 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25385 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25386 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111784 Y: 50775 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111786 Y: 50773 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -172,9 +178,7 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111785 Y: 50772 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12693 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12694 Level: 15.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25384 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111787 Y: 50772 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -188,17 +192,19 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111788 Y: 50774 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111784 Y: 50776 Level: 17.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12693 Level: 15.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12694 Level: 15.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25385 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25386 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111788 Y: 50772 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111785 Y: 50777 Level: 17.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111788 Y: 50777 Level: 17.
-[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55891 Y: 25386 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12693 Level: 15.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55891 Y: 25387 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55891 Y: 25384 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -208,13 +214,9 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111789 Y: 50774 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111789 Y: 50775 Level: 17.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111789 Y: 50776 Level: 17.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111783 Y: 50775 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55894 Y: 25386 Level: 16.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 111783 Y: 50775 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111783 Y: 50776 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -228,11 +230,11 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55893 Y: 25383 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12692 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111785 Y: 50778 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111783 Y: 50777 Level: 17.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12693 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 111782 Y: 50775 Level: 17.
 [browser:error] Failed to load resource: net::ERR_FAILED
@@ -246,32 +248,36 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55890 Y: 25387 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12692 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12694 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27946 Y: 12691 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55894 Y: 25383 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55889 Y: 25386 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55889 Y: 25387 Level: 16.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55891 Y: 25388 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12692 Level: 15.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27946 Y: 12691 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25389 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 55889 Y: 25387 Level: 16.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12691 Level: 15.
+[browser:error] Failed to load resource: net::ERR_FAILED
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27944 Y: 12693 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12695 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 55892 Y: 25390 Level: 16.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12695 Level: 15.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12694 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27947 Y: 12691 Level: 15.
+[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27945 Y: 12695 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
 [browser:log] An error occurred in "$v": Failed to obtain image tile X: 27944 Y: 12692 Level: 15.
 [browser:error] Failed to load resource: net::ERR_FAILED
-[browser:log] An error occurred in "$v": Failed to obtain image tile X: 27944 Y: 12693 Level: 15.
-[browser:error] Failed to load resource: net::ERR_FAILED
+2구역 결과: {"zoneId":"2","footprintCount":67,"analysisCount":67,"missingAnalysisCount":0,"floorCount":2679,"typeCounts":{"25":10,"32":6,"37":1,"41":14,"60":5,"65":2,"70":1,"79":2,"87":2,"55,56":5,"45,46":10,"51,52":9}}
+=== 3구역 계산 시작 ===
 3구역 결과: {"zoneId":"3","footprintCount":128,"analysisCount":128,"missingAnalysisCount":0,"floorCount":5422,"typeCounts":{"27":24,"38":5,"42":4,"50":7,"58":15,"67":24,"71":34,"82":8,"91":4,"103":3}}
 === 4구역 계산 시작 ===
 4구역 결과: {"zoneId":"4","footprintCount":44,"analysisCount":44,"missingAnalysisCount":0,"floorCount":1696,"typeCounts":{"25":6,"34":2,"40":12,"43":4,"52":1,"60":3,"63":2,"67":3,"72":1,"77":1,"47A":3,"47B":6}}
@@ -280,4 +286,69 @@ Index ready: {"footprints":277,"currentZoneId":"ALL","modes":["conservative","re
 Final zone row counts: {"2":67,"3":128,"4":44,"5":38}
 Wrote /home/runner/work/apgujeong-allocation-view-recommender/apgujeong-allocation-view-recommender/data/view_summary.json
 Wrote /home/runner/work/apgujeong-allocation-view-recommender/apgujeong-allocation-view-recommender/data/view_unit_rows.csv (277 rows)
-Wrote /home/runner/work/apgujeong-allocation-view-recommender/apgujeong-allocation-view-recommender/data/view_floor_rows.csv (11388 rows)
+Wrote /home/runner/work/apgujeong-allocation-view-recommender/apgujeong-allocation-view-recommender/data/view_floor_rows.csv (11321 rows)
+{
+  "zoneSummary": [
+    {
+      "구역": "2구역",
+      "전체세대수": 2571,
+      "각도산정세대수": 2535,
+      "미산정세대수": 36,
+      "산정률": 98.6,
+      "산정세대가중평균조망각": 51.09,
+      "특A급_전체세대대비_pct": 12.14,
+      "A급_전체세대대비_pct": 3.27,
+      "B급_전체세대대비_pct": 21.51,
+      "C급_전체세대대비_pct": 15.71,
+      "D급_전체세대대비_pct": 17.5,
+      "E급_전체세대대비_pct": 28.47,
+      "미산정_전체세대대비_pct": 1.4
+    },
+    {
+      "구역": "3구역",
+      "전체세대수": 5175,
+      "각도산정세대수": 5121,
+      "미산정세대수": 54,
+      "산정률": 98.96,
+      "산정세대가중평균조망각": 50.19,
+      "특A급_전체세대대비_pct": 13.0,
+      "A급_전체세대대비_pct": 2.96,
+      "B급_전체세대대비_pct": 11.01,
+      "C급_전체세대대비_pct": 21.78,
+      "D급_전체세대대비_pct": 26.67,
+      "E급_전체세대대비_pct": 23.54,
+      "미산정_전체세대대비_pct": 1.04
+    },
+    {
+      "구역": "4구역",
+      "전체세대수": 1662,
+      "각도산정세대수": 1554,
+      "미산정세대수": 108,
+      "산정률": 93.5,
+      "산정세대가중평균조망각": 55.56,
+      "특A급_전체세대대비_pct": 13.78,
+      "A급_전체세대대비_pct": 7.4,
+      "B급_전체세대대비_pct": 7.16,
+      "C급_전체세대대비_pct": 17.03,
+      "D급_전체세대대비_pct": 29.0,
+      "E급_전체세대대비_pct": 19.13,
+      "미산정_전체세대대비_pct": 6.5
+    },
+    {
+      "구역": "5구역",
+      "전체세대수": 1397,
+      "각도산정세대수": 1390,
+      "미산정세대수": 7,
+      "산정률": 99.5,
+      "산정세대가중평균조망각": 72.39,
+      "특A급_전체세대대비_pct": 27.56,
+      "A급_전체세대대비_pct": 6.8,
+      "B급_전체세대대비_pct": 11.02,
+      "C급_전체세대대비_pct": 20.69,
+      "D급_전체세대대비_pct": 12.96,
+      "E급_전체세대대비_pct": 20.47,
+      "미산정_전체세대대비_pct": 0.5
+    }
+  ],
+  "rowCount": 58
+}
