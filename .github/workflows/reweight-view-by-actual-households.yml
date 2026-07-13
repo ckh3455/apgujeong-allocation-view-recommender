@@ -1,0 +1,49 @@
+name: Reweight view by actual households
+
+on:
+  push:
+    paths:
+      - tools/reweight_view_by_actual_households.py
+      - .github/workflows/reweight-view-by-actual-households.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reweight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reweight by actual household counts
+        id: calc
+        continue-on-error: true
+        run: |
+          set +e
+          python tools/reweight_view_by_actual_households.py > data/actual_household_view_by_pyeong.log 2>&1
+          code=$?
+          echo "$code" > data/actual_household_view_by_pyeong.status
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat data/actual_household_view_by_pyeong.log
+          exit 0
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/actual_household_view_by_pyeong.log data/actual_household_view_by_pyeong.status
+          for f in data/actual_household_view_by_pyeong.json data/actual_household_view_by_pyeong.csv data/actual_household_view_by_pyeong.md; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
+          if ! git diff --cached --quiet; then
+            git commit -m "Reweight view angles by actual household counts"
+            git push
+          fi
+      - name: Fail when calculation failed
+        if: steps.calc.outputs.exit_code != '0'
+        run: exit 1
