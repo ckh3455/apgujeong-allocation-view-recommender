@@ -31,15 +31,22 @@ jobs:
       - name: Validate generated coverage
         run: |
           python - <<'PY'
-          import pandas as pd
-          p = pd.read_csv('data/rank_prices_2026_embedded.csv', encoding='utf-8-sig')
-          counts = p.groupby('구역').size().to_dict()
+          import csv
+          from collections import Counter
+          counts = Counter()
+          keys = set()
+          with open('data/rank_prices_2026_embedded.csv', encoding='utf-8-sig', newline='') as f:
+              for row in csv.DictReader(f):
+                  counts[row['구역']] += 1
+                  key = (row['구역'], row['단지명'], row['동'], row['호'])
+                  if key in keys:
+                      raise SystemExit(f'duplicate unit key: {key}')
+                  keys.add(key)
+          counts = dict(counts)
           expected = {'2구역': 1924, '3구역': 3934, '4구역': 1340, '5구역': 1232}
           print('counts=', counts)
           if counts != expected:
               raise SystemExit(f'coverage mismatch: {counts} != {expected}')
-          if p[['구역','단지명','동','호']].duplicated().any():
-              raise SystemExit('duplicate unit key exists')
           PY
       - name: Commit embedded data and app changes
         run: |
