@@ -1,0 +1,30 @@
+name: Audit zone 3 duplicate neighbors
+
+on:
+  push:
+    paths:
+      - tools/audit_zone3_duplicate_neighbors.py
+      - .github/workflows/audit-zone3-duplicate-neighbors.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/audit_zone3_duplicate_neighbors.py > data/zone3_duplicate_neighbors.log
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/zone3_duplicate_neighbors.json data/zone3_duplicate_neighbors.log
+          if ! git diff --cached --quiet; then
+            git commit -m "Audit zone 3 duplicate neighbors"
+            git push
+          fi
