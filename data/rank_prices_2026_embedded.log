@@ -1,0 +1,7 @@
+{'output': 'data/rank_prices_2026_embedded.csv', 'rows': 8430, 'zone_counts': {'2구역': 1924, '3구역': 3934, '4구역': 1340, '5구역': 1232}}
+generate_code=0
+patched /home/runner/work/apgujeong-allocation-view-recommender/apgujeong-allocation-view-recommender/app.py
+patch_code=0
+syntax_code=0
+duplicate unit key: ('3구역', '현대1,2차', '21', '705')
+validate_code=1

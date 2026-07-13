@@ -37,6 +37,7 @@ YEAR_RE = re.compile(r"^\d{4}$")
 
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = APP_DIR / "data"
+EMBEDDED_RANK_PRICE_PATH = DATA_DIR / "rank_prices_2026_embedded.csv"
 VIEW_MAP_HTML_CANDIDATES = [
     APP_DIR / "index_view_candidates.html",
     APP_DIR / "index.html",
@@ -197,6 +198,22 @@ def clean_main_df(df_raw: pd.DataFrame) -> pd.DataFrame:
 
     df["구역"] = df["구역"].astype(str).str.strip()
     df["단지명"] = df["단지명"].astype(str).str.strip()
+
+    # 원본 내장자료에서 호수가 공란인 단일 세대를 복원합니다.
+    # 행 배열상 2구역 신현대 112동 201~206호 중 206호만 공란으로 저장되어 있었습니다.
+    raw_dong = pd.to_numeric(df["동"], errors="coerce")
+    raw_ho = pd.to_numeric(df["호"], errors="coerce")
+    raw_price_2026 = pd.to_numeric(df.get(RANK_YEAR), errors="coerce") if RANK_YEAR in df.columns else pd.Series(pd.NA, index=df.index)
+    missing_112_206 = (
+        (df["구역"] == "2구역")
+        & (df["단지명"] == "신현대")
+        & (raw_dong == 112)
+        & raw_ho.isna()
+        & (raw_price_2026 == 69.38)
+    )
+    if int(missing_112_206.sum()) == 1:
+        df.loc[missing_112_206, "호"] = 206
+
     df["동"] = pd.to_numeric(df["동"], errors="coerce").astype("Int64")
     df["호"] = pd.to_numeric(df["호"], errors="coerce").astype("Int64")
     df = df.dropna(subset=["구역", "단지명", "동", "호"]).copy()
@@ -451,6 +468,52 @@ def apply_2026_floor_rank_adjustment(df_num: pd.DataFrame) -> pd.DataFrame:
             df.at[row_idx, note_col] = f"{top_floor}층 10% 보정"
 
     return df.drop(columns=["__floor_no", "__line_no"], errors="ignore")
+
+
+@st.cache_data(show_spinner=False)
+def load_embedded_rank_prices(path_text: str) -> pd.DataFrame:
+    prices = pd.read_csv(path_text, encoding="utf-8-sig")
+    required = ["구역", "단지명", "동", "호", "순위기준가격_2026_억"]
+    missing = [c for c in required if c not in prices.columns]
+    if missing:
+        raise ValueError(f"내장 순위가격 파일의 필수 컬럼이 없습니다: {', '.join(missing)}")
+    prices = prices.copy()
+    prices["구역"] = prices["구역"].astype(str).str.strip()
+    prices["단지명"] = prices["단지명"].astype(str).str.strip()
+    prices["동"] = pd.to_numeric(prices["동"], errors="coerce").astype("Int64")
+    prices["호"] = pd.to_numeric(prices["호"], errors="coerce").astype("Int64")
+    prices["순위기준가격_2026_억"] = pd.to_numeric(prices["순위기준가격_2026_억"], errors="coerce")
+    return prices.dropna(subset=["구역", "단지명", "동", "호", "순위기준가격_2026_억"])
+
+
+def apply_embedded_2026_rank_prices(df_num: pd.DataFrame) -> pd.DataFrame:
+    """앱에 내장된 확정 층별 순위가격을 동·호 기준으로 적용합니다."""
+    if RANK_YEAR not in df_num.columns:
+        return df_num.copy()
+    if not EMBEDDED_RANK_PRICE_PATH.exists():
+        return apply_2026_floor_rank_adjustment(df_num)
+
+    df = df_num.copy()
+    df["__rank_price_2026"] = pd.to_numeric(df[RANK_YEAR], errors="coerce")
+    df["__rank_price_note_2026"] = "원본 공시가격"
+
+    embedded = load_embedded_rank_prices(str(EMBEDDED_RANK_PRICE_PATH))
+    key_cols = ["구역", "단지명", "동", "호"]
+    price_map = embedded.set_index(key_cols)["순위기준가격_2026_억"]
+    note_map = embedded.set_index(key_cols).get("보정기준")
+
+    keys = pd.MultiIndex.from_frame(df[key_cols])
+    mapped = pd.Series(keys.map(price_map), index=df.index, dtype="float64")
+    matched = mapped.notna()
+    df.loc[matched, "__rank_price_2026"] = mapped.loc[matched]
+    df.loc[matched, "__rank_price_note_2026"] = "앱 내장 층별 보정가격"
+
+    if note_map is not None:
+        mapped_notes = pd.Series(keys.map(note_map), index=df.index)
+        note_mask = matched & mapped_notes.notna()
+        df.loc[note_mask, "__rank_price_note_2026"] = mapped_notes.loc[note_mask].astype(str)
+
+    return df
 
 
 def build_rank_table(df_num: pd.DataFrame, year_cols: list[str], zone: str, complex_name: str, dong: int, ho: int) -> pd.DataFrame:
@@ -1647,7 +1710,7 @@ if RANK_YEAR not in year_cols:
     st.stop()
 
 df_num = coerce_numeric(df, year_cols)
-df_num = apply_2026_floor_rank_adjustment(df_num)
+df_num = apply_embedded_2026_rank_prices(df_num)
 latest_year = int(RANK_YEAR)
 latest_year_col = str(latest_year)
 
