@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-07-13T13:13:58.738363+00:00",
+  "workbook": "data/main_data.xlsx",
+  "sheet": "공동주택 공시가격",
+  "headerExcelRow": 1,
+  "totalRowsAfterHeader": 10335,
+  "zone2RawRows": 1924,
+  "zone2ValidRows": 1923,
+  "zone2InvalidRows": 1,
+  "zone2DuplicateUnitKeys": 0,
+  "invalidRows": [
+    {
+      "excelRow": 2106,
+      "구역": "2구역",
+      "단지명": "신현대",
+      "동_raw": 112,
+      "호_raw": " ",
+      "동": 112,
+      "호": null,
+      "2026_raw": 69.38,
+      "2026": 69.38,
+      "invalidFields": [
+        "호"
+      ]
+    }
+  ],
+  "duplicates": [],
+  "firstZone2Row": {
+    "excelRow": 1235,
+    "구역": "2구역",
+    "단지명": "신현대",
+    "동_raw": 101,
+    "호_raw": 101,
+    "동": 101,
+    "호": 101,
+    "2026_raw": 42.9,
+    "2026": 42.9
+  },
+  "lastZone2Row": {
+    "excelRow": 3158,
+    "구역": "2구역",
+    "단지명": "신현대",
+    "동_raw": 124,
+    "호_raw": 1304,
+    "동": 124,
+    "호": 1304,
+    "2026_raw": 66.61,
+    "2026": 66.61
+  }
+}
