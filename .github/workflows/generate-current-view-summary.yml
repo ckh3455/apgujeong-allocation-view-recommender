@@ -1,0 +1,89 @@
+name: Generate current view summary
+
+on:
+  push:
+    paths:
+      - tools/generate_view_summary_from_current_index.js
+      - .github/workflows/generate-current-view-summary.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout recommender
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout current APGUJEONG-VIEW
+        uses: actions/checkout@v4
+        with:
+          repository: ckh3455/APGUJEONG-VIEW
+          ref: main
+          path: current-view
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Start current index server
+        run: |
+          cd current-view
+          nohup python3 -m http.server 8000 --bind 127.0.0.1 > ../data/current_index_server.log 2>&1 &
+          echo $! > ../data/current_index_server.pid
+          cd ..
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/index_v55_zone_cache_light.html >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Local index server did not start.' >&2
+          exit 1
+
+      - name: Calculate zones 3, 4 and 5
+        id: calculate
+        continue-on-error: true
+        env:
+          SOURCE_URL: http://127.0.0.1:8000/index_v55_zone_cache_light.html?summaryBuild=1
+          TARGET_ZONES: 3,4,5
+          VIEW_MODE: conservative
+        run: |
+          set +e
+          node tools/generate_view_summary_from_current_index.js > data/generate_view_summary.log 2>&1
+          code=$?
+          echo "$code" > data/generate_view_summary.status
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat data/generate_view_summary.log
+          exit 0
+
+      - name: Commit generated data and logs
+        run: |
+          rm -f data/current_index_server.pid
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/view_summary.json data/view_unit_rows.csv data/view_floor_rows.csv data/generate_view_summary.log data/generate_view_summary.status data/current_index_server.log
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+          else
+            git commit -m "Generate zones 3-5 view summary from current index"
+            git push
+          fi
+
+      - name: Fail when calculation failed
+        if: steps.calculate.outputs.exit_code != '0'
+        run: |
+          echo "View summary generation failed. See data/generate_view_summary.log."
+          exit 1
