@@ -1,0 +1,38 @@
+name: Audit missing 2026 prices
+
+on:
+  push:
+    paths:
+      - tools/audit_missing_2026_prices.py
+      - tools/audit_recorded_floor_prices.py
+      - data/main_data.xlsx
+      - .github/workflows/audit-missing-2026-prices.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check missing values
+        run: python3 tools/audit_missing_2026_prices.py | tee data/floor_price_missing_2026.log
+
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/floor_price_missing_2026.json data/floor_price_missing_2026.log
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "Audit missing 2026 floor prices"
+            git push
+          fi
