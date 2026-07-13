@@ -1,0 +1,34 @@
+name: Audit zone 2 row count
+
+on:
+  push:
+    paths:
+      - tools/audit_zone2_row_count.py
+      - .github/workflows/audit-zone2-row-count.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run audit
+        run: python tools/audit_zone2_row_count.py > data/zone2_row_count_audit.log
+      - name: Commit audit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/zone2_row_count_audit.json data/zone2_row_count_audit.log
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Audit zone 2 row count"
+            git push
+          fi
