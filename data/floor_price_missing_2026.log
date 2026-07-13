@@ -1,0 +1,25 @@
+{
+  "zones": {
+    "2구역": {
+      "validUnitRows": 1923,
+      "pricedRows": 1923,
+      "missing2026Rows": 0
+    },
+    "3구역": {
+      "validUnitRows": 3934,
+      "pricedRows": 3934,
+      "missing2026Rows": 0
+    },
+    "4구역": {
+      "validUnitRows": 1340,
+      "pricedRows": 1340,
+      "missing2026Rows": 0
+    },
+    "5구역": {
+      "validUnitRows": 1232,
+      "pricedRows": 1232,
+      "missing2026Rows": 0
+    }
+  },
+  "missingRows": []
+}
