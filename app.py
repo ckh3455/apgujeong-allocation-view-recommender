@@ -214,6 +214,19 @@ def clean_main_df(df_raw: pd.DataFrame) -> pd.DataFrame:
     if int(missing_112_206.sum()) == 1:
         df.loc[missing_112_206, "호"] = 206
 
+    # 원본 내장자료 입력 보정 2: 3구역 현대1,2차 21동 705호 중 두 번째 행은 706호
+    raw_dong = pd.to_numeric(df["동"], errors="coerce")
+    raw_ho = pd.to_numeric(df["호"], errors="coerce")
+    duplicate_21_705 = (
+        (df["구역"] == "3구역")
+        & (df["단지명"] == "현대1,2차")
+        & (raw_dong == 21)
+        & (raw_ho == 705)
+    )
+    duplicate_indices = df.index[duplicate_21_705].tolist()
+    if len(duplicate_indices) == 2:
+        df.at[duplicate_indices[-1], "호"] = 706
+
     df["동"] = pd.to_numeric(df["동"], errors="coerce").astype("Int64")
     df["호"] = pd.to_numeric(df["호"], errors="coerce").astype("Int64")
     df = df.dropna(subset=["구역", "단지명", "동", "호"]).copy()
@@ -483,7 +496,8 @@ def load_embedded_rank_prices(path_text: str) -> pd.DataFrame:
     prices["동"] = pd.to_numeric(prices["동"], errors="coerce").astype("Int64")
     prices["호"] = pd.to_numeric(prices["호"], errors="coerce").astype("Int64")
     prices["순위기준가격_2026_억"] = pd.to_numeric(prices["순위기준가격_2026_억"], errors="coerce")
-    return prices.dropna(subset=["구역", "단지명", "동", "호", "순위기준가격_2026_억"])
+    prices = prices.dropna(subset=["구역", "단지명", "동", "호", "순위기준가격_2026_억"])
+    return prices.drop_duplicates(subset=["구역", "단지명", "동", "호"], keep="first")
 
 
 def apply_embedded_2026_rank_prices(df_num: pd.DataFrame) -> pd.DataFrame:
