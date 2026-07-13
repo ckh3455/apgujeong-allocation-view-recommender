@@ -1,0 +1,36 @@
+name: Audit current view angles by pyeong
+
+on:
+  push:
+    paths:
+      - tools/audit_current_view_angles_by_pyeong.py
+      - .github/workflows/audit-current-view-angles-by-pyeong.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run current view-angle audit
+        run: python tools/audit_current_view_angles_by_pyeong.py | tee data/current_view_angles_by_pyeong.log
+      - name: Commit audit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/current_view_angles_by_pyeong.json data/current_view_angles_by_pyeong.csv data/current_view_angles_by_pyeong.log
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Audit current conservative view angles by pyeong"
+            git push
+          fi
