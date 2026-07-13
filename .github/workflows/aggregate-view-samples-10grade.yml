@@ -1,0 +1,34 @@
+name: Aggregate view samples into 10 grades
+
+on:
+  push:
+    paths:
+      - tools/aggregate_view_samples_10grade.py
+      - .github/workflows/aggregate-view-samples-10grade.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Aggregate
+        run: python tools/aggregate_view_samples_10grade.py > data/view_samples_10grade.log
+      - name: Commit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/view_samples_10grade.csv data/view_samples_10grade.md data/view_samples_10grade.log
+          if ! git diff --cached --quiet; then
+            git commit -m "Aggregate exact app view samples into 10 grades"
+            git push
+          fi
