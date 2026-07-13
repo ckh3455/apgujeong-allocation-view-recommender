@@ -1,0 +1,58 @@
+name: Calculate simultaneous conservative view by pyeong
+
+on:
+  push:
+    paths:
+      - tools/run_simultaneous_conservative_pyeong_calc.js
+      - .github/workflows/calc-simultaneous-conservative-pyeong.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  calculate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: ckh3455/APGUJEONG-VIEW
+          ref: main
+          path: current-view
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Calculate all zones together
+        id: calc
+        continue-on-error: true
+        env:
+          FACADE_SAMPLE_STEP_M: '8'
+        run: |
+          set +e
+          node tools/run_simultaneous_conservative_pyeong_calc.js > data/simultaneous_conservative_view_by_pyeong.log 2>&1
+          code=$?
+          echo "$code" > data/simultaneous_conservative_view_by_pyeong.status
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat data/simultaneous_conservative_view_by_pyeong.log
+          exit 0
+      - name: Commit results and logs
+        run: |
+          rm -f data/_simultaneous_conservative_calc.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/simultaneous_conservative_view_by_pyeong.json data/simultaneous_conservative_view_by_pyeong.csv data/simultaneous_conservative_view_by_pyeong.md data/simultaneous_conservative_view_by_pyeong.log data/simultaneous_conservative_view_by_pyeong.status
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Calculate simultaneous conservative view by pyeong"
+            git push
+          fi
+      - name: Fail when calculation failed
+        if: steps.calc.outputs.exit_code != '0'
+        run: |
+          echo "Calculation failed. See data/simultaneous_conservative_view_by_pyeong.log"
+          exit 1
